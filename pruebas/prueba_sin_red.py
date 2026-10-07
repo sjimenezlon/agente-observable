@@ -92,6 +92,8 @@ t = mlflow.get_trace(r["trace_id"])
 nombres = [s.name for s in t.data.spans]
 comprobar("span del agente y de la herramienta", "agente" in nombres and "ejecutar_sql" in nombres)
 comprobar("etiqueta del modelo", t.info.tags.get("modelo") == "guionado")
+raiz = next(sp for sp in t.data.spans if sp.name == "agente")
+comprobar("la traza no guarda la API key", "api_key" not in json.dumps(raiz.inputs) and set(raiz.inputs) == {"pregunta", "usuario", "modelo", "backend"})
 
 print("\nCalificadores")
 esp = {"tipo": "valor", "filas": [[30]]}

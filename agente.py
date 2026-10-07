@@ -66,14 +66,26 @@ def ejecutar_sql(sql: str) -> dict:
     return guardian.ejecutar(sql)
 
 
+def _sql_de(tc) -> str:
+    try:
+        return json.loads(tc.function.arguments or "{}").get("sql", "")
+    except (json.JSONDecodeError, AttributeError):
+        return ""
+
+
 def _limpiar(texto: str | None) -> str:
     return re.sub(r"<think>.*?</think>", "", texto or "", flags=re.S).strip()
 
 
 @mlflow.trace(name="agente", span_type=SpanType.AGENT)
-def preguntar(pregunta: str, b: config.Backend, cli=None, usuario: str = "anonimo") -> dict:
+def preguntar(pregunta: str, b: config.Backend, cli=None, usuario: str = "anonimo", al_paso=None) -> dict:
+    """al_paso(evento) es opcional: la página web lo usa para mostrar cada paso mientras ocurre."""
     cli = cli or config.cliente(b)
+    avisar = al_paso or (lambda e: None)
     span = mlflow.get_current_active_span()
+    if span:
+        # Entradas explícitas: sin esto el decorador guarda el objeto Backend entero, API key incluida.
+        span.set_inputs({"pregunta": pregunta, "usuario": usuario, "modelo": b.modelo, "backend": b.nombre})
     mlflow.update_current_trace(
         tags={"backend": b.nombre, "modelo": b.modelo, "datos_salen": str(b.externo).lower(), "motor": config.motor(),
               "capa": guardian.capa()["version"]},
@@ -89,9 +101,17 @@ def preguntar(pregunta: str, b: config.Backend, cli=None, usuario: str = "anonim
             if r["llamadas"] >= config.MAX_LLAMADAS_MODELO:
                 r["estado"], r["respuesta"] = "tope", "Detuve la consulta: llegó al tope de llamadas al modelo."
                 break
+            avisar({"tipo": "modelo_inicio", "n": r["llamadas"] + 1, "t": round(time.perf_counter() - t0, 2)})
+            t1 = time.perf_counter()
             resp = cli.chat.completions.create(model=b.modelo, messages=mensajes, tools=HERRAMIENTAS,
                                                temperature=0, max_tokens=config.MAX_TOKENS_SALIDA)
             r["llamadas"] += 1
+            u = resp.usage
+            avisar({"tipo": "modelo", "n": r["llamadas"], "seg": round(time.perf_counter() - t1, 2),
+                    "t": round(t1 - t0, 2), "entrada": getattr(u, "prompt_tokens", 0) or 0,
+                    "salida": getattr(u, "completion_tokens", 0) or 0,
+                    "pide": [_sql_de(tc) for tc in resp.choices[0].message.tool_calls or []],
+                    "texto": _limpiar(resp.choices[0].message.content)[:600]})
             if resp.usage:
                 r["tokens"]["entrada"] += resp.usage.prompt_tokens or 0
                 r["tokens"]["salida"] += resp.usage.completion_tokens or 0
@@ -109,12 +129,12 @@ def preguntar(pregunta: str, b: config.Backend, cli=None, usuario: str = "anonim
                     salida = {"ok": False, "error": "TOPE: no se ejecutan más consultas."}
                 else:
                     r["herramientas"] += 1
-                    try:
-                        sql = json.loads(tc.function.arguments or "{}").get("sql", "")
-                    except json.JSONDecodeError:
-                        sql = ""
+                    sql = _sql_de(tc)
+                    t1 = time.perf_counter()
                     salida = ejecutar_sql(sql)
                     r["consultas"].append({"sql": sql, **salida})
+                    avisar({"tipo": "sql", "sql": sql, "seg": round(time.perf_counter() - t1, 2), "t": round(t1 - t0, 2),
+                            **{k: salida.get(k) for k in ("ok", "rows", "error", "truncated")}})
                 mensajes.append({"role": "tool", "tool_call_id": tc.id,
                                  "content": json.dumps(salida, ensure_ascii=False, default=str)})
     except openai.RateLimitError:

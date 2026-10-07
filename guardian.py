@@ -115,6 +115,9 @@ def ejecutar_sqlserver(sql: str) -> dict:
     except pymssql.Error as e:
         msg = str(e.args[1] if len(e.args) > 1 else e)
         msg = msg.split("DB-Lib error")[0].replace("b\"", "").replace("b'", "").strip(" .\"'")
+        if "40613" in msg or "not currently available" in msg or "Adaptive Server connection failed" in msg:
+            return {"ok": False, "error": "BASE_DORMIDA: la base compartida se está despertando (se duerme tras una hora "
+                                          "sin uso) o no hay conexión. Repita en un minuto."}
         if "permission was denied" in msg:
             return {"ok": False, "error": f"SQL_DENEGADO por el servidor: {msg[:160]}"}
         return {"ok": False, "error": f"SQL_INVALIDO: {msg[:200]}"}

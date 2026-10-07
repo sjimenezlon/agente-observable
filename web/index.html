@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agente observable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fondo:#040630; --fondo2:#0a1260; --tinta:#eef2ff; --suave:rgba(238,242,255,.72); --tenue:rgba(238,242,255,.48);
+  --linea:rgba(255,255,255,.12); --panel:rgba(255,255,255,.055); --panel2:rgba(255,255,255,.09);
+  --azul:#6fa8ff; --verde:#4fd1a5; --ambar:#ffc45c; --rosa:#ff7a9a; --cian:#5fd6e8;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace; --display:'Fraunces',Georgia,serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Inter,system-ui,sans-serif;color:var(--tinta);min-height:100vh;
+  background:radial-gradient(1200px 600px at 85% -10%,#1b3fb0 0%,transparent 60%),
+             radial-gradient(900px 500px at -10% 110%,#06405a 0%,transparent 55%),
+             linear-gradient(160deg,var(--fondo),var(--fondo2));background-attachment:fixed}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:44px 44px;mask-image:linear-gradient(180deg,#000,transparent 85%)}
+button,input,textarea,select{font:inherit;color:inherit}
+.envoltura{position:relative;max-width:1320px;margin:0 auto;padding:22px 20px 60px}
+
+/* Cabecera */
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px}
+.marca{display:flex;align-items:center;gap:12px}
+.marca h1{font-family:var(--display);font-weight:600;font-size:26px;margin:0;letter-spacing:-.01em}
+.marca p{margin:2px 0 0;font-size:12.5px;color:var(--tenue)}
+.controles{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.control{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--linea);border-radius:999px;padding:5px 6px 5px 12px;font-size:12.5px}
+.control label{color:var(--tenue);font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:10.5px}
+select{background:#0d1660;border:1px solid var(--linea);border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600;outline:none}
+.segmento{display:flex;background:rgba(0,0,0,.25);border-radius:999px;padding:2px}
+.segmento button{border:0;background:transparent;border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;color:var(--suave);cursor:pointer}
+.segmento button.activo{background:var(--azul);color:#061040}
+.segmento button:disabled{opacity:.35;cursor:not-allowed}
+.punto{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--rosa);box-shadow:0 0 0 3px rgba(255,122,154,.18)}
+.punto.vivo{background:var(--verde);box-shadow:0 0 0 3px rgba(79,209,165,.2)}
+a{color:var(--azul)}
+.enlace{color:var(--tinta);text-decoration:none;font-weight:600}
+.enlace:hover{text-decoration:underline}
+
+/* Pestañas */
+nav{display:flex;gap:6px;margin:22px 0 18px;border-bottom:1px solid var(--linea)}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;font-weight:600;font-size:14.5px;color:var(--tenue);cursor:pointer;margin-bottom:-1px}
+nav button.activo{color:var(--tinta);border-color:var(--azul)}
+nav button small{display:block;font-weight:500;font-size:11px;color:var(--tenue)}
+.vista{display:none}.vista.activa{display:block;animation:sube .3s ease}
+@keyframes sube{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Paneles */
+.rejilla{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:18px}
+@media (max-width:900px){.rejilla{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--linea);border-radius:18px;padding:18px;backdrop-filter:blur(3px)}
+.etiqueta{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tenue);margin:0 0 8px}
+textarea{width:100%;background:rgba(0,0,0,.28);border:1px solid var(--linea);border-radius:14px;padding:12px 14px;font-size:15.5px;line-height:1.45;resize:vertical;outline:none;min-height:92px}
+textarea:focus{border-color:var(--azul)}
+.boton{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:11px 18px;font-weight:700;font-size:14.5px;cursor:pointer;transition:transform .08s,filter .2s}
+.boton:active{transform:scale(.98)}
+.primario{background:linear-gradient(135deg,#8ab8ff,#4f8bff);color:#061040;box-shadow:0 8px 24px -10px #4f8bff}
+.primario:disabled{filter:grayscale(.6) brightness(.7);cursor:wait}
+.secundario{background:var(--panel2);border:1px solid var(--linea)}
+.fila{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--linea);background:rgba(255,255,255,.04);border-radius:999px;padding:6px 11px;font-size:12.8px;cursor:pointer;text-align:left;color:var(--suave);transition:background .2s,border-color .2s}
+.chip:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:var(--tinta)}
+.chip b{font-family:var(--mono);font-weight:600;font-size:11px;color:var(--tenue);margin-right:5px}
+.grupo{margin-top:14px}
+.historial{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.historial li{padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.2);font-size:12.8px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.historial li:hover{background:rgba(255,255,255,.08)}
+.vacio{color:var(--tenue);font-size:13px}
+
+/* Recorrido */
+.recorrido{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.nodo{position:relative;text-align:center;padding:12px 6px;border-radius:14px;background:rgba(0,0,0,.22);border:1px solid var(--linea);font-size:12.5px;font-weight:600;color:var(--tenue);transition:all .3s}
+.nodo span{display:block;font-size:20px;margin-bottom:3px;filter:grayscale(1);opacity:.55;transition:all .3s}
+.nodo.hecho{color:var(--suave);border-color:rgba(79,209,165,.4)}
+.nodo.hecho span{filter:none;opacity:1}
+.nodo.activo{color:var(--tinta);border-color:var(--azul);box-shadow:0 0 0 4px rgba(111,168,255,.15),0 0 30px -6px var(--azul)}
+.nodo.activo span{filter:none;opacity:1;animation:late 1.1s ease-in-out infinite}
+.nodo.alerta{border-color:var(--rosa);color:var(--tinta)}
+@keyframes late{50%{transform:scale(1.18)}}
+.nodo:not(:last-child):after{content:"→";position:absolute;right:-9px;top:50%;transform:translateY(-50%);color:var(--tenue);font-size:12px}
+@media (max-width:600px){.recorrido{grid-template-columns:repeat(5,1fr);gap:4px}.nodo{font-size:10px;padding:8px 2px}.nodo:after{display:none}}
+
+.cronometro{font-family:var(--mono);font-size:13px;color:var(--suave)}
+.pasos{display:grid;gap:10px}
+.paso{border:1px solid var(--linea);border-radius:14px;background:rgba(0,0,0,.2);padding:12px 14px;animation:sube .35s ease}
+.paso .cab{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px}
+.paso .tipo{font-weight:700}
+.paso .meta{font-family:var(--mono);font-size:11.5px;color:var(--tenue)}
+.barra{position:relative;height:6px;border-radius:99px;background:rgba(255,255,255,.07);margin:8px 0 2px;overflow:hidden}
+.barra i{position:absolute;top:0;bottom:0;border-radius:99px}
+.paso.modelo .tipo{color:var(--ambar)}.paso.modelo .barra i{background:var(--ambar)}
+.paso.sql .tipo{color:var(--verde)}.paso.sql .barra i{background:var(--verde)}
+.paso.sql.negado .tipo{color:var(--rosa)}.paso.sql.negado .barra i{background:var(--rosa)}
+.paso.esperando{border-style:dashed}
+.paso.esperando .tipo:after{content:"";display:inline-block;width:12px;height:12px;margin-left:8px;border-radius:50%;border:2px solid var(--ambar);border-top-color:transparent;animation:gira .8s linear infinite;vertical-align:-2px}
+@keyframes gira{to{transform:rotate(360deg)}}
+pre.codigo{margin:8px 0 0;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:12.3px;line-height:1.55;white-space:pre-wrap;word-break:break-word;color:#dbe6ff}
+.kw{color:#8ab8ff;font-weight:600}.str{color:#ffd18a}.num{color:#9ef0cf}
+table.datos{border-collapse:collapse;margin-top:8px;font-size:12.5px;width:100%}
+table.datos th{text-align:left;color:var(--tenue);font-weight:600;padding:4px 8px;border-bottom:1px solid var(--linea);font-family:var(--mono);font-size:11px}
+table.datos td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.05);font-family:var(--mono)}
+.error{color:#ffd0db;font-family:var(--mono);font-size:12.3px;margin-top:6px}
+
+/* Respuesta */
+.respuesta{margin-top:16px;border-radius:18px;padding:20px;background:linear-gradient(160deg,rgba(111,168,255,.14),rgba(79,209,165,.08));border:1px solid rgba(111,168,255,.35);animation:sube .4s ease}
+.respuesta .texto{font-size:18.5px;line-height:1.55;margin:4px 0 14px}
+.fichas{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.ficha{background:rgba(0,0,0,.25);border-radius:12px;padding:10px 12px}
+.ficha b{display:block;font-family:var(--display);font-size:24px;font-weight:600}
+.ficha small{color:var(--tenue);font-size:11.5px}
+.insignias{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.insignia{font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.08)}
+.insignia.ok{background:rgba(79,209,165,.18);color:#c9f7e6}.insignia.mal{background:rgba(255,122,154,.2);color:#ffd0db}.insignia.aviso{background:rgba(255,196,92,.18);color:#ffe7b8}
+.opinion{margin-top:14px;padding-top:14px;border-top:1px solid var(--linea)}
+.opinion input{flex:1;min-width:160px;background:rgba(0,0,0,.28);border:1px solid var(--linea);border-radius:10px;padding:9px 12px;outline:none}
+.voto{border:1px solid var(--linea);background:rgba(255,255,255,.05);border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer}
+.voto.si.activo{background:var(--verde);color:#062a20;border-color:var(--verde)}
+.voto.no.activo{background:var(--rosa);color:#3a0716;border-color:var(--rosa)}
+
+/* Examen */
+.resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.tasa{background:var(--panel);border:1px solid var(--linea);border-radius:14px;padding:12px 14px}
+.tasa b{font-family:var(--display);font-size:28px;font-weight:600}
+.tasa small{display:block;color:var(--tenue);font-family:var(--mono);font-size:11px;margin-top:2px}
+.tasa .pista{height:5px;background:rgba(255,255,255,.08);border-radius:9px;margin-top:8px;overflow:hidden}
+.tasa .pista i{display:block;height:100%;border-radius:9px;transition:width .6s}
+table.examen{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px}
+table.examen th{font-size:10.5px;color:var(--tenue);font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:center;padding:0 4px}
+table.examen th:first-child{text-align:left}
+table.examen td{background:rgba(0,0,0,.2);padding:9px 6px;text-align:center}
+table.examen td:first-child{text-align:left;border-radius:10px 0 0 10px;padding-left:12px}
+table.examen td:last-child{border-radius:0 10px 10px 0}
+table.examen tr.fila-ex{cursor:pointer}
+table.examen tr.fila-ex:hover td{background:rgba(255,255,255,.07)}
+table.examen tr.corriendo td{background:rgba(111,168,255,.12)}
+.v{display:inline-flex;width:22px;height:22px;border-radius:50%;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+.v.si{background:rgba(79,209,165,.22);color:var(--verde)}.v.no{background:rgba(255,122,154,.25);color:var(--rosa)}.v.na{color:var(--tenue)}
+.detalle td{background:rgba(0,0,0,.32)!important;text-align:left!important;border-radius:10px!important;padding:12px 14px!important}
+.mono{font-family:var(--mono)}
+.ayuda{font-size:13.5px;color:var(--suave);line-height:1.55}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:#0f1a6e;border:1px solid var(--linea);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;transition:all .3s;z-index:9}
+.toast.ver{opacity:1;transform:translateX(-50%)}
+footer{margin-top:30px;color:var(--tenue);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <header>
+    <div class="marca">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="none" stroke="#6fa8ff" stroke-opacity=".35"/><circle cx="20" cy="20" r="12" fill="none" stroke="#4fd1a5" stroke-opacity=".6"/><circle cx="20" cy="20" r="5" fill="#ffc45c"/></svg>
+      <div>
+        <h1>Agente observable</h1>
+        <p>Centro Aurora · datos sintéticos · el modelo propone, el código decide, MLflow lo deja escrito</p>
+      </div>
+    </div>
+    <div class="controles">
+      <div class="control"><label for="modelo">Modelo</label><select id="modelo"></select></div>
+      <div class="control"><label>Base</label>
+        <div class="segmento" id="motor">
+          <button data-m="sqlite" class="activo">Local</button>
+          <button data-m="sqlserver" id="btn-compartida">Compartida</button>
+        </div>
+      </div>
+      <div class="control" style="padding-right:12px"><span class="punto" id="mlflow-punto"></span><a class="enlace" id="mlflow-enlace" target="_blank" rel="noreferrer">MLflow</a></div>
+    </div>
+  </header>
+
+  <nav>
+    <button data-v="preguntar" class="activo">Preguntar<small>y ver la traza en vivo</small></button>
+    <button data-v="examen">Examen<small>11 preguntas, 6 calificadores</small></button>
+    <button data-v="guardian">Guardián<small>SQL directo, sin modelo</small></button>
+  </nav>
+
+  <!-- ── Preguntar ── -->
+  <section class="vista activa" id="v-preguntar">
+    <div class="rejilla">
+      <aside class="panel">
+        <p class="etiqueta">Su pregunta</p>
+        <textarea id="pregunta" placeholder="Ej.: ¿Qué porcentaje de ejecución lleva la vigencia 2026?"></textarea>
+        <div class="fila" style="margin-top:10px;justify-content:space-between">
+          <span class="ayuda" style="font-size:12px">Enter para preguntar · Shift+Enter nueva línea</span>
+          <button class="boton primario" id="btn-preguntar">Preguntar</button>
+        </div>
+        <div id="sugerencias"></div>
+        <div class="grupo">
+          <p class="etiqueta">Historial de esta sesión</p>
+          <ul class="historial" id="historial"><li class="vacio" style="cursor:default">Aún no hay preguntas.</li></ul>
+        </div>
+      </aside>
+
+      <div>
+        <div class="panel">
+          <div class="fila" style="justify-content:space-between;margin-bottom:12px">
+            <p class="etiqueta" style="margin:0">Lo que está pasando</p>
+            <span class="cronometro" id="cronometro">listo</span>
+          </div>
+          <div class="recorrido" id="recorrido">
+            <div class="nodo" data-n="pregunta"><span>💬</span>Pregunta</div>
+            <div class="nodo" data-n="modelo"><span>🧠</span>Modelo</div>
+            <div class="nodo" data-n="guardian"><span>🛡️</span>Guardián</div>
+            <div class="nodo" data-n="base"><span>🗄️</span>Base</div>
+            <div class="nodo" data-n="respuesta"><span>✅</span>Respuesta</div>
+          </div>
+          <div class="pasos" id="pasos"><p class="vacio">Haga una pregunta: cada llamada al modelo y cada consulta a la base aparecerá aquí mientras ocurre, con su tiempo y sus tokens.</p></div>
+        </div>
+        <div id="respuesta"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Examen ── -->
+  <section class="vista" id="v-examen">
+    <div class="panel" style="margin-bottom:14px">
+      <div class="fila" style="justify-content:space-between">
+        <div>
+          <p class="etiqueta">El examen</p>
+          <p class="ayuda" style="margin:0;max-width:760px">Las mismas 11 preguntas para cualquier modelo: 7 de cifras (la respuesta esperada sale de un SQL de referencia), 1 de privacidad y 3 ataques. Seis calificadores en código dicen sí o no y por qué. Queda como una corrida en MLflow para comparar.</p>
+        </div>
+        <button class="boton primario" id="btn-examen">Correr el examen</button>
+      </div>
+    </div>
+    <div class="resumen" id="resumen"></div>
+    <div class="panel" style="overflow-x:auto">
+      <table class="examen" id="tabla-examen"></table>
+    </div>
+  </section>
+
+  <!-- ── Guardián ── -->
+  <section class="vista" id="v-guardian">
+    <div class="rejilla">
+      <aside class="panel">
+        <p class="etiqueta">Pruebe al guardián</p>
+        <p class="ayuda" style="margin-top:0">Aquí no hay modelo: su SQL va directo al guardián y, si pasa, a la base elegida arriba. Es lo mismo que ocurre cuando el modelo pide una consulta.</p>
+        <div class="chips" id="intentos"></div>
+        <textarea id="sql" class="mono" style="font-size:13.5px;margin-top:12px;min-height:120px" spellcheck="false"></textarea>
+        <div class="fila" style="margin-top:10px;justify-content:flex-end"><button class="boton primario" id="btn-sql">Ejecutar</button></div>
+      </aside>
+      <div class="panel" id="resultado-sql"><p class="vacio">El veredicto del guardián y las filas aparecerán aquí.</p></div>
+    </div>
+  </section>
+
+  <footer>Repositorio: <a href="https://github.com/sjimenezlon/agente-observable" target="_blank" rel="noreferrer">github.com/sjimenezlon/agente-observable</a> · Lección: <a href="https://gobernanzadatos.vercel.app/observabilidad" target="_blank" rel="noreferrer">gobernanzadatos.vercel.app/observabilidad</a></footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const miles = (n) => Number(n || 0).toLocaleString('es-CO');
+const CALIF = ['cifra_correcta', 'admite_el_limite', 'base_intacta', 'sin_datos_personales', 'no_revela_instrucciones', 'termino'];
+const CORTO = { cifra_correcta: 'Cifra', admite_el_limite: 'Límite', base_intacta: 'Base intacta', sin_datos_personales: 'Privacidad', no_revela_instrucciones: 'Instrucciones', termino: 'Terminó' };
+const ESTADOS = { completo: ['ok', 'completo'], tope: ['aviso', 'tope de llamadas'], tope_tokens: ['aviso', 'agotó tokens'], '429': ['mal', 'cuota agotada'], sin_conexion: ['mal', 'sin servidor de modelo'], error: ['mal', 'error'] };
+let E = null, motor = 'sqlite', historial = [], ultimo = null;
+
+function toast(t) { const x = $('#toast'); x.textContent = t; x.classList.add('ver'); setTimeout(() => x.classList.remove('ver'), 2200); }
+
+function resaltarSQL(sql) {
+  return esc(sql)
+    .replace(/('(?:[^']|'')*')/g, '<span class="str">$1</span>')
+    .replace(/\b(SELECT|FROM|WHERE|JOIN|ON|AND|OR|GROUP BY|ORDER BY|AS|IN|SUM|COUNT|ROUND|AVG|WITH|TOP|LIMIT|DESC|ASC|CASE|WHEN|THEN|ELSE|END|DISTINCT|NOT|NULL|IS|LEFT|INNER|HAVING|UPDATE|DELETE|INSERT|SET|DROP)\b/gi, '<span class="kw">$1</span>')
+    .replace(/(^|[^\w#])(\d+(?:\.\d+)?)(?![\w])/g, '$1<span class="num">$2</span>');
+}
+
+function tablaFilas(rows) {
+  if (!rows || !rows.length) return '<p class="vacio" style="margin:6px 0 0">Sin filas.</p>';
+  const cols = Object.keys(rows[0]);
+  const fmt = (v) => typeof v === 'number' ? (Number.isInteger(v) ? miles(v) : v.toLocaleString('es-CO')) : esc(v);
+  return `<table class="datos"><tr>${cols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr>${rows.slice(0, 12).map((r) => `<tr>${cols.map((c) => `<td>${fmt(r[c])}</td>`).join('')}</tr>`).join('')}</table>${rows.length > 12 ? `<p class="vacio">… y ${rows.length - 12} filas más</p>` : ''}`;
+}
+
+function urlTraza(id) { return E?.experimento ? `${E.mlflow}/#/experiments/${E.experimento}/traces?selectedEvaluationId=${id}` : E?.mlflow; }
+function urlRun(id) { return E?.experimento ? `${E.mlflow}/#/experiments/${E.experimento}/runs/${id}` : E?.mlflow; }
+
+async function api(ruta, datos) {
+  const r = await fetch(ruta, datos ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) } : {});
+  return r.json();
+}
+
+// ── Estado inicial ──
+async function cargar() {
+  E = await api('/api/estado');
+  const sel = $('#modelo');
+  const modelos = E.modelos.length ? E.modelos : [E.modelo];
+  sel.innerHTML = modelos.map((m) => `<option ${m === E.modelo ? 'selected' : ''}>${esc(m)}</option>`).join('');
+  if (!E.modelos.length && E.backend === 'local') toast('Ollama no responde: ábralo y recargue la página');
+  $('#btn-compartida').disabled = !E.hay_compartida;
+  $('#btn-compartida').title = E.hay_compartida ? E.servidor : 'Configure SQLSERVER_* en .env para usar la base compartida';
+  motor = E.motor === 'sqlserver' && E.hay_compartida ? 'sqlserver' : 'sqlite';
+  $$('#motor button').forEach((b) => b.classList.toggle('activo', b.dataset.m === motor));
+  $('#mlflow-enlace').href = E.mlflow;
+  $('#mlflow-enlace').textContent = E.mlflow_vivo ? `MLflow ${E.mlflow.split(':').pop()}` : 'MLflow apagado';
+  $('#mlflow-punto').classList.toggle('vivo', E.mlflow_vivo);
+  const grupos = [['Cifras', (p) => p.tipo === 'valor' || p.tipo === 'filas'], ['Privacidad', (p) => p.tipo === 'privacidad'], ['Ataques', (p) => p.tipo === 'ataque' || p.tipo === 'fuga']];
+  $('#sugerencias').innerHTML = grupos.map(([t, f]) => `<div class="grupo"><p class="etiqueta">${t}</p><div class="chips">${E.preguntas.filter(f).map((p) => `<button class="chip" data-q="${esc(p.pregunta)}"><b>${p.id}</b>${esc(p.pregunta)}</button>`).join('')}</div></div>`).join('');
+  $$('#sugerencias .chip').forEach((c) => c.onclick = () => { $('#pregunta').value = c.dataset.q; preguntar(); });
+  tablaExamenVacia();
+}
+
+$$('#motor button').forEach((b) => b.onclick = () => { if (b.disabled) return; motor = b.dataset.m; $$('#motor button').forEach((x) => x.classList.toggle('activo', x === b)); if (motor === 'sqlserver') despertar(); else toast('Base local (SQLite)'); });
+
+async function despertar() {
+  toast('Conectando con la base compartida…');
+  for (let k = 0; k < 4; k++) {
+    const r = await api('/api/guardian', { sql: 'SELECT COUNT(*) AS n FROM proyectos', motor: 'sqlserver' });
+    if (r.ok) return toast(`Base compartida lista · ${E.servidor}`);
+    if (!String(r.error).startsWith('BASE_DORMIDA')) return toast('Base compartida: ' + r.error);
+    toast('La base estaba dormida: despertándola (puede tardar un minuto)…');
+    await new Promise((res) => setTimeout(res, 15000));
+  }
+  toast('La base no respondió: siga con la base local y reintente luego');
+}
+$$('nav button').forEach((b) => b.onclick = () => { $$('nav button').forEach((x) => x.classList.toggle('activo', x === b)); $$('.vista').forEach((v) => v.classList.toggle('activa', v.id === 'v-' + b.dataset.v)); });
+
+// ── Preguntar ──
+function nodo(n, clase) { $$('#recorrido .nodo').forEach((x) => { if (x.dataset.n === n) x.className = 'nodo ' + clase; }); }
+function reiniciarRecorrido() { $$('#recorrido .nodo').forEach((x) => x.className = 'nodo'); }
+
+function pintarPasos(eventos, total) {
+  const pasos = [];
+  const esc_t = Math.max(total, 0.5);
+  for (const e of eventos) {
+    if (e.tipo === 'modelo_inicio') pasos.push({ esperando: true, n: e.n, t: e.t });
+    if (e.tipo === 'modelo') {
+      const i = pasos.findIndex((p) => p.esperando && p.n === e.n);
+      const html = `<div class="paso modelo"><div class="cab"><span class="tipo">🧠 Llamada al modelo #${e.n}</span><span class="meta">${e.seg.toFixed(1)} s · ${miles(e.entrada)} + ${miles(e.salida)} tokens</span></div>
+        <div class="barra"><i style="left:${(e.t / esc_t) * 100}%;width:${Math.max(1, (e.seg / esc_t) * 100)}%"></i></div>
+        ${e.pide.length ? e.pide.map((s) => `<p class="ayuda" style="margin:8px 0 0">Pide ejecutar este SQL:</p><pre class="codigo">${resaltarSQL(s)}</pre>`).join('') : `<p class="ayuda" style="margin:8px 0 0">Responde con texto (fin del ciclo).</p>`}</div>`;
+      if (i >= 0) pasos[i] = { html }; else pasos.push({ html });
+    }
+    if (e.tipo === 'sql') {
+      pasos.push({ html: `<div class="paso sql ${e.ok ? '' : 'negado'}"><div class="cab"><span class="tipo">${e.ok ? '🛡️ Guardián: permitido → 🗄️ base' : String(e.error).startsWith('BASE_DORMIDA') ? '🗄️ Base: no disponible' : String(e.error).includes('servidor') ? '🗄️ Servidor: permiso denegado' : '🛡️ Guardián: denegado'}</span><span class="meta">${e.seg < 0.05 ? '<0,1' : e.seg.toFixed(1)} s${e.rows ? ` · ${e.rows.length} filas` : ''}</span></div>
+        <div class="barra"><i style="left:${(e.t / esc_t) * 100}%;width:${Math.max(1, (e.seg / esc_t) * 100)}%"></i></div>
+        ${e.ok ? tablaFilas(e.rows) : `<p class="error">${esc(e.error)}</p>`}</div>` });
+    }
+  }
+  return pasos.map((p) => p.esperando ? `<div class="paso modelo esperando"><div class="cab"><span class="tipo">🧠 Llamada al modelo #${p.n}</span><span class="meta">pensando…</span></div></div>` : p.html).join('');
+}
+
+function pintarRespuesta(r, err) {
+  if (err) { $('#respuesta').innerHTML = `<div class="respuesta" style="border-color:var(--rosa)"><p class="etiqueta">Error</p><p class="texto">${esc(err)}</p></div>`; return; }
+  const [cls, txt] = ESTADOS[r.estado] || ['aviso', r.estado];
+  const negadas = r.consultas.filter((c) => !c.ok).length;
+  $('#respuesta').innerHTML = `<div class="respuesta">
+    <p class="etiqueta">Respuesta</p><p class="texto">${esc(r.respuesta)}</p>
+    <div class="fichas">
+      <div class="ficha"><b>${String(r.segundos).replace('.', ',')} s</b><small>tiempo total</small></div>
+      <div class="ficha"><b>${r.llamadas}</b><small>llamadas al modelo</small></div>
+      <div class="ficha"><b>${r.consultas.length}</b><small>consultas SQL${negadas ? ` · ${negadas} negadas` : ''}</small></div>
+      <div class="ficha"><b>${miles(r.tokens.entrada + r.tokens.salida)}</b><small>tokens (${miles(r.tokens.entrada)} + ${miles(r.tokens.salida)})</small></div>
+    </div>
+    <div class="insignias">
+      <span class="insignia ${cls}">${txt}</span>
+      <span class="insignia">${esc(r.modelo)}</span>
+      <span class="insignia ${motor === 'sqlserver' ? 'aviso' : ''}">${motor === 'sqlserver' ? 'base compartida' : 'base local'}</span>
+      ${r._externo ? '<span class="insignia mal">los datos salen a un servidor externo</span>' : '<span class="insignia ok">los datos no salen del equipo</span>'}
+    </div>
+    ${r.trace_id ? `<p class="ayuda" style="margin:0">Traza <span class="mono">${esc(r.trace_id)}</span> · <a href="${urlTraza(r.trace_id)}" target="_blank" rel="noreferrer">abrirla en MLflow →</a></p>` : ''}
+    ${r.trace_id ? `<div class="opinion"><p class="etiqueta">¿Usted se la cree?</p>
+      <div class="fila"><button class="voto si" data-b="1">👍 Sí</button><button class="voto no" data-b="0">👎 No</button>
+      <input id="comentario" placeholder="Por qué (opcional): queda pegado a la traza"><button class="boton secundario" id="btn-opinar">Guardar opinión</button></div></div>` : ''}
+  </div>`;
+  let voto = null;
+  $$('.voto').forEach((v) => v.onclick = () => { voto = v.dataset.b === '1'; $$('.voto').forEach((x) => x.classList.toggle('activo', x === v)); });
+  const g = $('#btn-opinar');
+  if (g) g.onclick = async () => {
+    if (voto === null) return toast('Elija 👍 o 👎 primero');
+    const res = await api('/api/opinar', { trace_id: r.trace_id, bien: voto, comentario: $('#comentario').value, quien: E.usuario });
+    toast(res.ok ? 'Opinión guardada en MLflow como HUMAN' : 'No se pudo guardar: ' + res.error);
+    if (res.ok) g.disabled = true;
+  };
+}
+
+async function esperar(id, alCambio) {
+  for (;;) {
+    const t = await api('/api/trabajo/' + id);
+    alCambio(t);
+    if (t.fin) return t;
+    await new Promise((r) => setTimeout(r, 350));
+  }
+}
+
+async function preguntar() {
+  const q = $('#pregunta').value.trim();
+  if (!q) return toast('Escriba una pregunta');
+  const btn = $('#btn-preguntar'); btn.disabled = true; btn.textContent = 'Preguntando…';
+  reiniciarRecorrido(); nodo('pregunta', 'hecho'); nodo('modelo', 'activo');
+  $('#respuesta').innerHTML = ''; $('#pasos').innerHTML = '';
+  const t0 = performance.now();
+  const reloj = setInterval(() => $('#cronometro').textContent = ((performance.now() - t0) / 1000).toFixed(1).replace('.', ',') + ' s', 100);
+  const { id } = await api('/api/preguntar', { pregunta: q, modelo: $('#modelo').value, motor, usuario: E.usuario });
+  let vistos = -1;
+  const t = await esperar(id, (t) => {
+    const total = (performance.now() - t0) / 1000;
+    if (t.eventos.length !== vistos) { vistos = t.eventos.length; $('#pasos').innerHTML = pintarPasos(t.eventos, total) || '<p class="vacio">Cargando el modelo en memoria…</p>'; }
+    const ult = t.eventos[t.eventos.length - 1];
+    if (ult?.tipo === 'modelo_inicio') { nodo('modelo', 'activo'); }
+    if (ult?.tipo === 'modelo' && ult.pide.length) { nodo('modelo', 'hecho'); nodo('guardian', 'activo'); }
+    if (ult?.tipo === 'sql') { nodo('guardian', ult.ok ? 'hecho' : 'alerta'); nodo('base', ult.ok ? 'hecho' : ''); nodo('modelo', 'activo'); }
+  });
+  clearInterval(reloj);
+  $('#cronometro').textContent = 'listo · ' + ((performance.now() - t0) / 1000).toFixed(1).replace('.', ',') + ' s';
+  $$('#recorrido .nodo').forEach((x) => { if (x.classList.contains('activo')) x.className = 'nodo hecho'; });
+  nodo('respuesta', t.error || t.resultado?.estado !== 'completo' ? 'alerta' : 'hecho');
+  if (t.resultado) t.resultado._externo = !!t.eventos.find((e) => e.tipo === 'inicio')?.externo;
+  pintarRespuesta(t.resultado, t.error);
+  btn.disabled = false; btn.textContent = 'Preguntar';
+  if (t.resultado) {
+    historial.unshift({ q, r: t.resultado, eventos: t.eventos, total: (performance.now() - t0) / 1000 });
+    $('#historial').innerHTML = historial.map((h, k) => `<li data-k="${k}"><span>${esc(h.q)}</span><span class="mono" style="color:var(--tenue)">${String(h.r.segundos).replace('.', ',')} s</span></li>`).join('');
+    $$('#historial li').forEach((li) => li.onclick = () => { const h = historial[li.dataset.k]; $('#pregunta').value = h.q; $('#pasos').innerHTML = pintarPasos(h.eventos, h.total); pintarRespuesta(h.r); });
+  }
+}
+$('#btn-preguntar').onclick = preguntar;
+$('#pregunta').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); preguntar(); } });
+
+// ── Examen ──
+function tablaExamenVacia() {
+  $('#tabla-examen').innerHTML = `<tr><th>Pregunta</th>${CALIF.map((c) => `<th title="${c}">${CORTO[c]}</th>`).join('')}<th>s</th><th>tokens</th></tr>` +
+    E.preguntas.map((p, k) => `<tr class="fila-ex" data-k="${k}"><td><span class="mono" style="color:var(--tenue);font-size:11px">${p.id}</span> ${esc(p.pregunta)}</td>${CALIF.map(() => '<td><span class="v na">·</span></td>').join('')}<td class="mono">—</td><td class="mono">—</td></tr>`).join('');
+  $('#resumen').innerHTML = CALIF.map((c) => `<div class="tasa"><b>—</b><small>${c}</small><div class="pista"><i style="width:0"></i></div></div>`).join('');
+}
+
+function pintarResumen(filas) {
+  $('#resumen').innerHTML = CALIF.map((c) => {
+    const vs = filas.filter((f) => f.veredictos[c]).map((f) => f.veredictos[c].v);
+    const t = vs.length ? vs.filter(Boolean).length / vs.length : null;
+    const col = t === null ? 'var(--tenue)' : t === 1 ? 'var(--verde)' : t >= 0.7 ? 'var(--ambar)' : 'var(--rosa)';
+    return `<div class="tasa"><b style="color:${col}">${t === null ? '—' : Math.round(t * 100) + ' %'}</b><small>${c} · ${vs.length ? vs.filter(Boolean).length + '/' + vs.length : 'no aplica aún'}</small><div class="pista"><i style="width:${(t || 0) * 100}%;background:${col}"></i></div></div>`;
+  }).join('');
+}
+
+$('#btn-examen').onclick = async () => {
+  const btn = $('#btn-examen'); btn.disabled = true; btn.textContent = 'Corriendo…';
+  tablaExamenVacia();
+  const filas = [];
+  const { id } = await api('/api/examen', { modelo: $('#modelo').value, motor });
+  const t = await esperar(id, (t) => {
+    $$('#tabla-examen tr.fila-ex').forEach((tr) => tr.classList.remove('corriendo'));
+    for (const e of t.eventos) {
+      const tr = $(`#tabla-examen tr.fila-ex[data-k="${e.k}"]`);
+      if (!tr) continue;
+      if (e.tipo === 'examen_inicio' && !filas[e.k]) tr.classList.add('corriendo');
+      if (e.tipo === 'examen_fila' && !filas[e.k]) {
+        filas[e.k] = e;
+        tr.innerHTML = `<td><span class="mono" style="color:var(--tenue);font-size:11px">${e.id}</span> ${esc(e.pregunta)}</td>` +
+          CALIF.map((c) => e.veredictos[c] ? `<td><span class="v ${e.veredictos[c].v ? 'si' : 'no'}" title="${esc(e.veredictos[c].r)}">${e.veredictos[c].v ? '✓' : '✕'}</span></td>` : '<td><span class="v na">–</span></td>').join('') +
+          `<td class="mono">${String(e.segundos).replace('.', ',')}</td><td class="mono">${miles(e.tokens)}</td>`;
+        tr.onclick = () => {
+          const sig = tr.nextElementSibling;
+          if (sig?.classList.contains('detalle')) return sig.remove();
+          const d = document.createElement('tr'); d.className = 'detalle';
+          d.innerHTML = `<td colspan="${CALIF.length + 3}"><p class="etiqueta">Respuesta</p><p style="margin:0 0 8px;font-size:15px">${esc(e.respuesta)}</p>${e.sql.map((s) => `<pre class="codigo">${resaltarSQL(s)}</pre>`).join('')}
+            <ul style="margin:10px 0 0;padding-left:18px;font-size:13px;line-height:1.6">${Object.entries(e.veredictos).map(([k, v]) => `<li><b style="color:${v.v ? 'var(--verde)' : 'var(--rosa)'}">${k}</b> · ${esc(v.r)}</li>`).join('')}</ul>
+            ${e.trace_id ? `<p class="ayuda" style="margin:8px 0 0"><a href="${urlTraza(e.trace_id)}" target="_blank" rel="noreferrer">Ver la traza en MLflow →</a></p>` : ''}</td>`;
+          tr.after(d);
+        };
+        pintarResumen(filas.filter(Boolean));
+      }
+    }
+    const pend = E.preguntas.findIndex((_, k) => !filas[k]);
+    if (pend >= 0 && !t.fin) $(`#tabla-examen tr.fila-ex[data-k="${pend}"]`)?.classList.add('corriendo');
+  });
+  btn.disabled = false; btn.textContent = 'Correr el examen';
+  if (t.error) return toast('Error: ' + t.error);
+  toast('Examen terminado y guardado en MLflow');
+  if (t.resultado?.run_id) $('#resumen').insertAdjacentHTML('beforeend', `<div class="tasa" style="display:flex;flex-direction:column;justify-content:center"><a href="${urlRun(t.resultado.run_id)}" target="_blank" rel="noreferrer" style="font-weight:700">Abrir la corrida en MLflow →</a><small>compárela con otros modelos</small></div>`);
+};
+
+// ── Guardián ──
+const INTENTOS = [
+  ['Conteo', "SELECT COUNT(*) AS vigentes FROM proyectos WHERE estado IN ('A','S')"],
+  ['Ejecución 2026', "SELECT ROUND(100.0 * (SELECT SUM(d.valor) FROM desembolsos d JOIN contratos c ON c.id_contrato = d.id_contrato WHERE c.vigencia = 2026 AND d.anulado = 0) / (SELECT SUM(valor_total) FROM contratos WHERE vigencia = 2026), 1) AS pct"],
+  ['Borrar pagos', 'DELETE FROM desembolsos'],
+  ['Datos personales', 'SELECT nombre, documento, cuenta_bancaria FROM contratistas'],
+  ['Columna oculta', 'SELECT id_contrato, id_contratista FROM contratos'],
+  ['Dos sentencias', 'SELECT 1; DROP TABLE contratos'],
+  ['División entera', 'SELECT 100 * 1 / 3 AS truncado, 100.0 * 1 / 3 AS bien'],
+];
+$('#intentos').innerHTML = INTENTOS.map(([t, s], k) => `<button class="chip" data-k="${k}">${t}</button>`).join('');
+$$('#intentos .chip').forEach((c) => c.onclick = () => { $('#sql').value = INTENTOS[c.dataset.k][1]; ejecutarSQL(); });
+$('#sql').value = INTENTOS[2][1];
+async function ejecutarSQL() {
+  const sql = $('#sql').value;
+  $('#resultado-sql').innerHTML = '<p class="vacio">Consultando…</p>';
+  const t0 = performance.now();
+  const r = await api('/api/guardian', { sql, motor });
+  const seg = ((performance.now() - t0) / 1000).toFixed(2).replace('.', ',');
+  $('#resultado-sql').innerHTML = `<p class="etiqueta">${motor === 'sqlserver' ? 'Base compartida · ' + esc(E.servidor) : 'Base local · SQLite'} · ${seg} s</p>
+    <div class="paso sql ${r.ok ? '' : 'negado'}" style="animation:sube .3s"><div class="cab"><span class="tipo" style="font-size:16px">${r.ok ? '✓ Permitido' : '✕ Denegado'}</span></div>
+    <pre class="codigo">${resaltarSQL(sql)}</pre>${r.ok ? tablaFilas(r.rows) : `<p class="error" style="font-size:13.5px">${esc(r.error)}</p>`}</div>
+    <p class="ayuda">${r.ok ? 'Lectura dentro de la capa semántica: máximo 50 filas.' : (String(r.error).includes('servidor') ? 'Lo negó el <b>servidor</b>: el usuario no tiene ese permiso.' : 'Lo negó el <b>guardián</b> antes de llegar a la base.')}</p>`;
+}
+$('#btn-sql').onclick = ejecutarSQL;
+
+cargar();
+</script>
+</body>
+</html>
