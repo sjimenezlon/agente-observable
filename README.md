@@ -18,6 +18,7 @@ Lección interactiva que acompaña este repositorio: **[gobernanzadatos.vercel.a
 | Agente | `agente.py` | El ciclo modelo → herramienta → modelo, con topes (6 consultas, 7 llamadas) |
 | Evaluación | `evaluar.py` | 11 preguntas y 6 calificadores en código, registrados en MLflow |
 | Base compartida | `cargar_sqlserver.py` | Lleva la base a SQL Server (Azure, Docker o el del aula) y crea un usuario que solo lee la capa |
+| Diagnóstico | `diagnostico.py` | Revisa uno por uno los requisitos y dice qué hacer si algo falla |
 | Opinión humana | `opinar.py` | Una persona califica una respuesta; queda pegada a su traza |
 | Pruebas | `pruebas/prueba_sin_red.py` | 28 pruebas sin red ni modelo |
 | Exportar | `exportar.py` | Corridas y trazas a un JSON liviano para un tablero |
@@ -37,6 +38,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python crear_base.py
 python pruebas/prueba_sin_red.py        # debe decir: 28 ok · 0 fallas
+python diagnostico.py                   # revisa Python, librerías, Ollama, modelo y base: dice qué arreglar
 ```
 
 Baje un modelo local pequeño (2,5 GB; corre en un portátil con 16 GB de RAM):
