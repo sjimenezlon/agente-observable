@@ -18,7 +18,7 @@ Lección interactiva que acompaña este repositorio: **[gobernanzadatos.vercel.a
 | Agente | `agente.py` | El ciclo modelo → herramienta → modelo, con topes (6 consultas, 7 llamadas) |
 | Evaluación | `evaluar.py` | 11 preguntas y 6 calificadores en código, registrados en MLflow |
 | Base compartida | `cargar_sqlserver.py` | Lleva la base a SQL Server (Azure, Docker o el del aula) y crea un usuario que solo lee la capa |
-| App web | `web.py` + `web/index.html` | Preguntar con la traza en vivo, opinar, correr el examen y probar el guardián desde el navegador (puerto 8070) |
+| App web | `web.py` + `web/index.html` | Preguntar con la traza en vivo, opinar y probar el guardián desde el navegador (puerto 8070) |
 | Diagnóstico | `diagnostico.py` | Revisa uno por uno los requisitos y dice qué hacer si algo falla |
 | Opinión humana | `opinar.py` | Una persona califica una respuesta; queda pegada a su traza |
 | Pruebas | `pruebas/prueba_sin_red.py` | 28 pruebas sin red ni modelo |
@@ -138,7 +138,6 @@ python cargar_sqlserver.py --servidor localhost --admin sa --base aurora --crear
 `python web.py` abre **http://127.0.0.1:8070** (sin dependencias nuevas):
 
 - **Preguntar**: cada llamada al modelo y cada consulta aparecen mientras ocurren, con su tiempo, sus tokens, el SQL y las filas. Al final, la respuesta, el enlace a su traza en MLflow y los botones 👍 / 👎 para dejar su opinión (queda como HUMAN en la traza).
-- **Examen**: las 11 preguntas con los 6 calificadores, llenándose en vivo; clic en una fila para ver la respuesta y el porqué. Queda como corrida en MLflow.
 - **Guardián**: SQL directo, sin modelo, contra la base local o la compartida, para ver qué niega el guardián y qué niega el servidor.
 
 Arriba se elige el modelo (solo los locales; los `-cloud` de Ollama no se ofrecen porque corren fuera del equipo) y la base (local o compartida). Use los puertos 8070 (web) y 5070 (MLflow) para no chocar con otras herramientas del curso.

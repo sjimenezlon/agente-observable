@@ -1,4 +1,4 @@
-"""El agente en el navegador: pregunte, mire la traza en vivo, opine y corra el examen.
+"""El agente en el navegador: pregunte, mire la traza en vivo, opine y pruebe el guardián.
 
     python web.py                 → http://127.0.0.1:8070
     python web.py --puerto 8071
@@ -27,7 +27,6 @@ from agente import EXPERIMENTO, preguntar, preparar_mlflow
 PAGINA = Path(__file__).resolve().parent / "web" / "index.html"
 MLFLOW_UI = os.environ.get("MLFLOW_UI", "http://127.0.0.1:5070")
 TRABAJOS: dict[str, dict] = {}
-CON_ESPERADO = {"cifra_correcta", "admite_el_limite"}     # los calificadores que comparan con lo esperado
 UNO_A_LA_VEZ = threading.Lock()          # un modelo local atiende de a una pregunta
 
 
@@ -82,58 +81,6 @@ def trabajo_pregunta(tid: str, datos: dict):
         t["fin"] = True
 
 
-def trabajo_examen(tid: str, datos: dict):
-    from evaluar import CALIFICADORES, cargar_set, huella, registrar_prompt
-    t = TRABAJOS[tid]
-    with UNO_A_LA_VEZ:
-        try:
-            con_motor(datos.get("motor", "sqlite"))
-            b = config.backend(None, datos.get("modelo") or None)
-            cli = config.cliente(b)
-            casos = cargar_set(None)
-            filas = []
-            with mlflow.start_run(run_name=f"{b.modelo} · capa {guardian.capa()['version']} · web") as run:
-                version = registrar_prompt()
-                mlflow.log_params({"backend": b.nombre, "modelo": b.modelo, "capa": guardian.capa()["version"],
-                                   "instrucciones": f"aurora-instrucciones v{version}", "preguntas": len(casos),
-                                   "motor": config.motor(), "origen": "web"})
-                t["run_id"] = run.info.run_id
-                for k, caso in enumerate(casos):
-                    exp = caso["expectations"]
-                    t["eventos"].append({"tipo": "examen_inicio", "k": k, "id": exp["id"]})
-                    antes = huella()
-                    r = preguntar(caso["inputs"]["pregunta"], b, cli, usuario="examen-web")
-                    r["base_intacta"] = antes == huella()
-                    mlflow.flush_trace_async_logging()      # la traza debe existir antes de pegarle veredictos
-                    ver = {}
-                    for c in CALIFICADORES:
-                        f = c(outputs=r, expectations=exp) if c.name in CON_ESPERADO else c(outputs=r)
-                        if f is None:
-                            continue
-                        ver[c.name] = {"v": bool(f.value), "r": f.rationale or ""}
-                        if r.get("trace_id"):
-                            mlflow.log_feedback(trace_id=r["trace_id"], name=c.name, value=bool(f.value), rationale=f.rationale,
-                                                source=AssessmentSource(source_type=AssessmentSourceType.CODE, source_id="web.py"))
-                    fila = {"id": exp["id"], "tipo": exp["tipo"], "pregunta": r["pregunta"], "respuesta": r["respuesta"],
-                            "segundos": r["segundos"], "tokens": r["tokens"]["entrada"] + r["tokens"]["salida"],
-                            "trace_id": r.get("trace_id"), "veredictos": ver, "sql": [c["sql"] for c in r["consultas"]]}
-                    filas.append(fila)
-                    t["eventos"].append({**fila, "clase": fila["tipo"], "tipo": "examen_fila", "k": k})
-                tasas = {}
-                for c in CALIFICADORES:
-                    vs = [f["veredictos"][c.name]["v"] for f in filas if c.name in f["veredictos"]]
-                    if vs:
-                        tasas[c.name] = sum(vs) / len(vs)
-                        mlflow.log_metric(f"{c.name}/mean", tasas[c.name])
-                n = max(len(filas), 1)
-                mlflow.log_metrics({"tokens_por_pregunta": round(sum(f["tokens"] for f in filas) / n),
-                                    "segundos_por_pregunta": round(sum(f["segundos"] for f in filas) / n, 1)})
-                t["resultado"] = {"tasas": tasas, "run_id": run.info.run_id}
-        except Exception as e:
-            t["error"] = f"{type(e).__name__}: {e}"
-        t["fin"] = True
-
-
 class Manejador(BaseHTTPRequestHandler):
     def log_message(self, *_):
         pass
@@ -168,13 +115,12 @@ class Manejador(BaseHTTPRequestHandler):
 
     def do_POST(self):
         datos = self._leer()
-        if self.path in ("/api/preguntar", "/api/examen"):
-            if self.path == "/api/preguntar" and not (datos.get("pregunta") or "").strip():
+        if self.path == "/api/preguntar":
+            if not (datos.get("pregunta") or "").strip():
                 return self._json({"error": "Escriba una pregunta"}, 400)
             tid = uuid.uuid4().hex[:10]
             TRABAJOS[tid] = {"eventos": [], "fin": False, "resultado": None, "error": None, "inicio": time.time()}
-            destino = trabajo_pregunta if self.path == "/api/preguntar" else trabajo_examen
-            threading.Thread(target=destino, args=(tid, datos), daemon=True).start()
+            threading.Thread(target=trabajo_pregunta, args=(tid, datos), daemon=True).start()
             self._json({"id": tid, "en_cola": UNO_A_LA_VEZ.locked()})
         elif self.path == "/api/opinar":
             try:

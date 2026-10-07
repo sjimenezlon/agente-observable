@@ -125,25 +125,6 @@ table.datos td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.05);fon
 .voto.si.activo{background:var(--verde);color:#062a20;border-color:var(--verde)}
 .voto.no.activo{background:var(--rosa);color:#3a0716;border-color:var(--rosa)}
 
-/* Examen */
-.resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
-.tasa{background:var(--panel);border:1px solid var(--linea);border-radius:14px;padding:12px 14px}
-.tasa b{font-family:var(--display);font-size:28px;font-weight:600}
-.tasa small{display:block;color:var(--tenue);font-family:var(--mono);font-size:11px;margin-top:2px}
-.tasa .pista{height:5px;background:rgba(255,255,255,.08);border-radius:9px;margin-top:8px;overflow:hidden}
-.tasa .pista i{display:block;height:100%;border-radius:9px;transition:width .6s}
-table.examen{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px}
-table.examen th{font-size:10.5px;color:var(--tenue);font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:center;padding:0 4px}
-table.examen th:first-child{text-align:left}
-table.examen td{background:rgba(0,0,0,.2);padding:9px 6px;text-align:center}
-table.examen td:first-child{text-align:left;border-radius:10px 0 0 10px;padding-left:12px}
-table.examen td:last-child{border-radius:0 10px 10px 0}
-table.examen tr.fila-ex{cursor:pointer}
-table.examen tr.fila-ex:hover td{background:rgba(255,255,255,.07)}
-table.examen tr.corriendo td{background:rgba(111,168,255,.12)}
-.v{display:inline-flex;width:22px;height:22px;border-radius:50%;align-items:center;justify-content:center;font-size:12px;font-weight:800}
-.v.si{background:rgba(79,209,165,.22);color:var(--verde)}.v.no{background:rgba(255,122,154,.25);color:var(--rosa)}.v.na{color:var(--tenue)}
-.detalle td{background:rgba(0,0,0,.32)!important;text-align:left!important;border-radius:10px!important;padding:12px 14px!important}
 .mono{font-family:var(--mono)}
 .ayuda{font-size:13.5px;color:var(--suave);line-height:1.55}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:#0f1a6e;border:1px solid var(--linea);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;transition:all .3s;z-index:9}
@@ -175,7 +156,6 @@ footer{margin-top:30px;color:var(--tenue);font-size:12px;text-align:center}
 
   <nav>
     <button data-v="preguntar" class="activo">Preguntar<small>y ver la traza en vivo</small></button>
-    <button data-v="examen">Examen<small>11 preguntas, 6 calificadores</small></button>
     <button data-v="guardian">Guardián<small>SQL directo, sin modelo</small></button>
   </nav>
 
@@ -216,23 +196,6 @@ footer{margin-top:30px;color:var(--tenue);font-size:12px;text-align:center}
     </div>
   </section>
 
-  <!-- ── Examen ── -->
-  <section class="vista" id="v-examen">
-    <div class="panel" style="margin-bottom:14px">
-      <div class="fila" style="justify-content:space-between">
-        <div>
-          <p class="etiqueta">El examen</p>
-          <p class="ayuda" style="margin:0;max-width:760px">Las mismas 11 preguntas para cualquier modelo: 7 de cifras (la respuesta esperada sale de un SQL de referencia), 1 de privacidad y 3 ataques. Seis calificadores en código dicen sí o no y por qué. Queda como una corrida en MLflow para comparar.</p>
-        </div>
-        <button class="boton primario" id="btn-examen">Correr el examen</button>
-      </div>
-    </div>
-    <div class="resumen" id="resumen"></div>
-    <div class="panel" style="overflow-x:auto">
-      <table class="examen" id="tabla-examen"></table>
-    </div>
-  </section>
-
   <!-- ── Guardián ── -->
   <section class="vista" id="v-guardian">
     <div class="rejilla">
@@ -256,8 +219,6 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const miles = (n) => Number(n || 0).toLocaleString('es-CO');
-const CALIF = ['cifra_correcta', 'admite_el_limite', 'base_intacta', 'sin_datos_personales', 'no_revela_instrucciones', 'termino'];
-const CORTO = { cifra_correcta: 'Cifra', admite_el_limite: 'Límite', base_intacta: 'Base intacta', sin_datos_personales: 'Privacidad', no_revela_instrucciones: 'Instrucciones', termino: 'Terminó' };
 const ESTADOS = { completo: ['ok', 'completo'], tope: ['aviso', 'tope de llamadas'], tope_tokens: ['aviso', 'agotó tokens'], '429': ['mal', 'cuota agotada'], sin_conexion: ['mal', 'sin servidor de modelo'], error: ['mal', 'error'] };
 let E = null, motor = 'sqlite', historial = [], ultimo = null;
 
@@ -278,7 +239,6 @@ function tablaFilas(rows) {
 }
 
 function urlTraza(id) { return E?.experimento ? `${E.mlflow}/#/experiments/${E.experimento}/traces?selectedEvaluationId=${id}` : E?.mlflow; }
-function urlRun(id) { return E?.experimento ? `${E.mlflow}/#/experiments/${E.experimento}/runs/${id}` : E?.mlflow; }
 
 async function api(ruta, datos) {
   const r = await fetch(ruta, datos ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) } : {});
@@ -302,7 +262,6 @@ async function cargar() {
   const grupos = [['Cifras', (p) => p.tipo === 'valor' || p.tipo === 'filas'], ['Privacidad', (p) => p.tipo === 'privacidad'], ['Ataques', (p) => p.tipo === 'ataque' || p.tipo === 'fuga']];
   $('#sugerencias').innerHTML = grupos.map(([t, f]) => `<div class="grupo"><p class="etiqueta">${t}</p><div class="chips">${E.preguntas.filter(f).map((p) => `<button class="chip" data-q="${esc(p.pregunta)}"><b>${p.id}</b>${esc(p.pregunta)}</button>`).join('')}</div></div>`).join('');
   $$('#sugerencias .chip').forEach((c) => c.onclick = () => { $('#pregunta').value = c.dataset.q; preguntar(); });
-  tablaExamenVacia();
 }
 
 $$('#motor button').forEach((b) => b.onclick = () => { if (b.disabled) return; motor = b.dataset.m; $$('#motor button').forEach((x) => x.classList.toggle('activo', x === b)); if (motor === 'sqlserver') despertar(); else toast('Base local (SQLite)'); });
@@ -421,59 +380,6 @@ async function preguntar() {
 }
 $('#btn-preguntar').onclick = preguntar;
 $('#pregunta').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); preguntar(); } });
-
-// ── Examen ──
-function tablaExamenVacia() {
-  $('#tabla-examen').innerHTML = `<tr><th>Pregunta</th>${CALIF.map((c) => `<th title="${c}">${CORTO[c]}</th>`).join('')}<th>s</th><th>tokens</th></tr>` +
-    E.preguntas.map((p, k) => `<tr class="fila-ex" data-k="${k}"><td><span class="mono" style="color:var(--tenue);font-size:11px">${p.id}</span> ${esc(p.pregunta)}</td>${CALIF.map(() => '<td><span class="v na">·</span></td>').join('')}<td class="mono">—</td><td class="mono">—</td></tr>`).join('');
-  $('#resumen').innerHTML = CALIF.map((c) => `<div class="tasa"><b>—</b><small>${c}</small><div class="pista"><i style="width:0"></i></div></div>`).join('');
-}
-
-function pintarResumen(filas) {
-  $('#resumen').innerHTML = CALIF.map((c) => {
-    const vs = filas.filter((f) => f.veredictos[c]).map((f) => f.veredictos[c].v);
-    const t = vs.length ? vs.filter(Boolean).length / vs.length : null;
-    const col = t === null ? 'var(--tenue)' : t === 1 ? 'var(--verde)' : t >= 0.7 ? 'var(--ambar)' : 'var(--rosa)';
-    return `<div class="tasa"><b style="color:${col}">${t === null ? '—' : Math.round(t * 100) + ' %'}</b><small>${c} · ${vs.length ? vs.filter(Boolean).length + '/' + vs.length : 'no aplica aún'}</small><div class="pista"><i style="width:${(t || 0) * 100}%;background:${col}"></i></div></div>`;
-  }).join('');
-}
-
-$('#btn-examen').onclick = async () => {
-  const btn = $('#btn-examen'); btn.disabled = true; btn.textContent = 'Corriendo…';
-  tablaExamenVacia();
-  const filas = [];
-  const { id } = await api('/api/examen', { modelo: $('#modelo').value, motor });
-  const t = await esperar(id, (t) => {
-    $$('#tabla-examen tr.fila-ex').forEach((tr) => tr.classList.remove('corriendo'));
-    for (const e of t.eventos) {
-      const tr = $(`#tabla-examen tr.fila-ex[data-k="${e.k}"]`);
-      if (!tr) continue;
-      if (e.tipo === 'examen_inicio' && !filas[e.k]) tr.classList.add('corriendo');
-      if (e.tipo === 'examen_fila' && !filas[e.k]) {
-        filas[e.k] = e;
-        tr.innerHTML = `<td><span class="mono" style="color:var(--tenue);font-size:11px">${e.id}</span> ${esc(e.pregunta)}</td>` +
-          CALIF.map((c) => e.veredictos[c] ? `<td><span class="v ${e.veredictos[c].v ? 'si' : 'no'}" title="${esc(e.veredictos[c].r)}">${e.veredictos[c].v ? '✓' : '✕'}</span></td>` : '<td><span class="v na">–</span></td>').join('') +
-          `<td class="mono">${String(e.segundos).replace('.', ',')}</td><td class="mono">${miles(e.tokens)}</td>`;
-        tr.onclick = () => {
-          const sig = tr.nextElementSibling;
-          if (sig?.classList.contains('detalle')) return sig.remove();
-          const d = document.createElement('tr'); d.className = 'detalle';
-          d.innerHTML = `<td colspan="${CALIF.length + 3}"><p class="etiqueta">Respuesta</p><p style="margin:0 0 8px;font-size:15px">${esc(e.respuesta)}</p>${e.sql.map((s) => `<pre class="codigo">${resaltarSQL(s)}</pre>`).join('')}
-            <ul style="margin:10px 0 0;padding-left:18px;font-size:13px;line-height:1.6">${Object.entries(e.veredictos).map(([k, v]) => `<li><b style="color:${v.v ? 'var(--verde)' : 'var(--rosa)'}">${k}</b> · ${esc(v.r)}</li>`).join('')}</ul>
-            ${e.trace_id ? `<p class="ayuda" style="margin:8px 0 0"><a href="${urlTraza(e.trace_id)}" target="_blank" rel="noreferrer">Ver la traza en MLflow →</a></p>` : ''}</td>`;
-          tr.after(d);
-        };
-        pintarResumen(filas.filter(Boolean));
-      }
-    }
-    const pend = E.preguntas.findIndex((_, k) => !filas[k]);
-    if (pend >= 0 && !t.fin) $(`#tabla-examen tr.fila-ex[data-k="${pend}"]`)?.classList.add('corriendo');
-  });
-  btn.disabled = false; btn.textContent = 'Correr el examen';
-  if (t.error) return toast('Error: ' + t.error);
-  toast('Examen terminado y guardado en MLflow');
-  if (t.resultado?.run_id) $('#resumen').insertAdjacentHTML('beforeend', `<div class="tasa" style="display:flex;flex-direction:column;justify-content:center"><a href="${urlRun(t.resultado.run_id)}" target="_blank" rel="noreferrer" style="font-weight:700">Abrir la corrida en MLflow →</a><small>compárela con otros modelos</small></div>`);
-};
 
 // ── Guardián ──
 const INTENTOS = [
