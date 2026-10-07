@@ -1,0 +1,90 @@
+{
+  "version": "1.2",
+  "fuente": "aurora.sqlite (sintética). Lo que no está aquí no se puede leer.",
+  "limite_filas": 50,
+  "corte": "2026-09-30",
+  "relaciones": [
+    "lineas.id_dependencia = dependencias.id_dependencia",
+    "proyectos.id_linea = lineas.id_linea",
+    "contratos.id_proyecto = proyectos.id_proyecto",
+    "desembolsos.id_contrato = contratos.id_contrato"
+  ],
+  "tablas": {
+    "dependencias": {
+      "descripcion": "Unidades de la institución.",
+      "columnas": {
+        "id_dependencia": "Identificador.",
+        "nombre": "Nombre de la dependencia."
+      }
+    },
+    "lineas": {
+      "descripcion": "Líneas de investigación; cada una pertenece a una dependencia.",
+      "columnas": {
+        "id_linea": "Identificador.",
+        "nombre": "Nombre de la línea.",
+        "id_dependencia": "Dependencia responsable."
+      }
+    },
+    "proyectos": {
+      "descripcion": "Una fila por proyecto de investigación.",
+      "columnas": {
+        "id_proyecto": "Código, por ejemplo PRY-007.",
+        "nombre": "Nombre del proyecto.",
+        "id_linea": "Línea de investigación.",
+        "fecha_inicio": "AAAA-MM-DD.",
+        "fecha_fin_prevista": "AAAA-MM-DD.",
+        "estado": "A activo, S suspendido, C cerrado."
+      },
+      "reglas": [
+        "Proyectos vigentes = estado IN ('A','S'). Los suspendidos siguen vigentes para efectos presupuestales."
+      ],
+      "ejemplos": [
+        {
+          "pregunta": "¿Cuántos proyectos vigentes hay?",
+          "sql": "SELECT COUNT(*) AS vigentes FROM proyectos WHERE estado IN ('A','S')"
+        }
+      ]
+    },
+    "contratos": {
+      "descripcion": "Una fila por contrato.",
+      "columnas": {
+        "id_contrato": "Código, por ejemplo CT-2026-015.",
+        "id_proyecto": "Proyecto al que pertenece.",
+        "objeto": "Qué se contrató.",
+        "vigencia": "Año fiscal en que se FIRMÓ (no el de ejecución).",
+        "fecha_firma": "AAAA-MM-DD.",
+        "valor_total": "Valor CONTRATADO en pesos colombianos, sin decimales. No es lo pagado."
+      },
+      "reglas": [
+        "valor_total es lo CONTRATADO (comprometido), no lo pagado. Lo pagado está en la tabla desembolsos (anulado = 0).",
+        "La vigencia es el año de firma, no el de ejecución.",
+        "El contratista no es consultable: sus datos personales no están en esta capa."
+      ]
+    },
+    "desembolsos": {
+      "descripcion": "Pagos de cada contrato; un contrato puede tener varios.",
+      "columnas": {
+        "id_desembolso": "Identificador.",
+        "id_contrato": "Contrato pagado.",
+        "fecha": "AAAA-MM-DD.",
+        "valor": "Pesos colombianos.",
+        "anulado": "1 si el pago se anuló, 0 si es válido."
+      },
+      "reglas": [
+        "Lo pagado suma solo desembolsos con anulado = 0. Los anulados se conservan por auditoría.",
+        "Para porcentajes multiplique por 100.0 (no 100): en SQLite, entero/entero trunca a 0.",
+        "Nunca sume contratos.valor_total después de unir con desembolsos: cada pago repite el contrato. Calcule lo pagado y lo contratado en subconsultas separadas."
+      ],
+      "ejemplos": [
+        {
+          "pregunta": "¿Cuánto se ha pagado del contrato CT-2026-015?",
+          "sql": "SELECT SUM(valor) AS pagado FROM desembolsos WHERE id_contrato = 'CT-2026-015' AND anulado = 0"
+        },
+        {
+          "pregunta": "¿Qué porcentaje de ejecución lleva la vigencia 2026?",
+          "sql": "SELECT ROUND(100.0 * (SELECT SUM(d.valor) FROM desembolsos d JOIN contratos c ON c.id_contrato = d.id_contrato WHERE c.vigencia = 2026 AND d.anulado = 0) / (SELECT SUM(valor_total) FROM contratos WHERE vigencia = 2026), 1) AS pct_ejecucion"
+        }
+      ]
+    }
+  }
+}

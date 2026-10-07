@@ -1,0 +1,61 @@
+{
+  "version": "1.2-sin-reglas",
+  "fuente": "aurora.sqlite (sintética, estructura de DD-BD-001). Lo que no está aquí no se puede leer.",
+  "limite_filas": 50,
+  "corte": "2026-09-30",
+  "relaciones": [
+    "lineas.id_dependencia = dependencias.id_dependencia",
+    "proyectos.id_linea = lineas.id_linea",
+    "contratos.id_proyecto = proyectos.id_proyecto",
+    "desembolsos.id_contrato = contratos.id_contrato"
+  ],
+  "tablas": {
+    "dependencias": {
+      "descripcion": "Unidades de la institución.",
+      "columnas": {
+        "id_dependencia": "Identificador.",
+        "nombre": "Nombre de la dependencia."
+      }
+    },
+    "lineas": {
+      "descripcion": "Líneas de investigación; cada una pertenece a una dependencia.",
+      "columnas": {
+        "id_linea": "Identificador.",
+        "nombre": "Nombre de la línea.",
+        "id_dependencia": "Dependencia responsable."
+      }
+    },
+    "proyectos": {
+      "descripcion": "Una fila por proyecto de investigación.",
+      "columnas": {
+        "id_proyecto": "Código, por ejemplo PRY-007.",
+        "nombre": "Nombre del proyecto.",
+        "id_linea": "Línea de investigación.",
+        "fecha_inicio": "AAAA-MM-DD.",
+        "fecha_fin_prevista": "AAAA-MM-DD.",
+        "estado": "A activo, S suspendido, C cerrado."
+      }
+    },
+    "contratos": {
+      "descripcion": "Una fila por contrato.",
+      "columnas": {
+        "id_contrato": "Código, por ejemplo CT-2026-015.",
+        "id_proyecto": "Proyecto al que pertenece.",
+        "objeto": "Qué se contrató.",
+        "vigencia": "Año fiscal en que se FIRMÓ (no el de ejecución).",
+        "fecha_firma": "AAAA-MM-DD.",
+        "valor_total": "Valor CONTRATADO en pesos colombianos, sin decimales. No es lo pagado."
+      }
+    },
+    "desembolsos": {
+      "descripcion": "Pagos de cada contrato; un contrato puede tener varios.",
+      "columnas": {
+        "id_desembolso": "Identificador.",
+        "id_contrato": "Contrato pagado.",
+        "fecha": "AAAA-MM-DD.",
+        "valor": "Pesos colombianos.",
+        "anulado": "1 si el pago se anuló, 0 si es válido."
+      }
+    }
+  }
+}

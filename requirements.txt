@@ -1,0 +1,2 @@
+openai>=1.60
+mlflow>=3.5
