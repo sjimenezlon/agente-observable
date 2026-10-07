@@ -26,7 +26,7 @@ HERRAMIENTAS = [{
     "type": "function",
     "function": {
         "name": "ejecutar_sql",
-        "description": "Ejecuta UNA consulta SELECT de SQLite sobre las tablas del mapa. Devuelve JSON con ok, rows y truncated, o ok=false y error.",
+        "description": "Ejecuta UNA consulta SELECT sobre las tablas del mapa. Devuelve JSON con ok, rows y truncated, o ok=false y error.",
         "parameters": {"type": "object", "properties": {"sql": {"type": "string"}}, "required": ["sql"]},
     },
 }]
@@ -52,8 +52,12 @@ def mapa() -> str:
     return "\n".join(partes)
 
 
+DIALECTOS = {"sqlite": "SQLite", "sqlserver": "SQL Server (T-SQL: TOP n en lugar de LIMIT; fechas como '2026-01-01')"}
+
+
 def instrucciones() -> str:
-    return config.INSTRUCCIONES.read_text(encoding="utf-8").replace("{{mapa}}", mapa())
+    return (config.INSTRUCCIONES.read_text(encoding="utf-8")
+            .replace("{{motor}}", DIALECTOS[config.motor()]).replace("{{mapa}}", mapa()))
 
 
 @mlflow.trace(span_type=SpanType.TOOL)
@@ -71,7 +75,7 @@ def preguntar(pregunta: str, b: config.Backend, cli=None, usuario: str = "anonim
     cli = cli or config.cliente(b)
     span = mlflow.get_current_active_span()
     mlflow.update_current_trace(
-        tags={"backend": b.nombre, "modelo": b.modelo, "datos_salen": str(b.externo).lower(),
+        tags={"backend": b.nombre, "modelo": b.modelo, "datos_salen": str(b.externo).lower(), "motor": config.motor(),
               "capa": guardian.capa()["version"]},
         metadata={"mlflow.trace.user": usuario},
     )

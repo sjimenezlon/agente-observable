@@ -72,7 +72,7 @@
       },
       "reglas": [
         "Lo pagado suma solo desembolsos con anulado = 0. Los anulados se conservan por auditoría.",
-        "Para porcentajes multiplique por 100.0 (no 100): en SQLite, entero/entero trunca a 0.",
+        "Para porcentajes multiplique por 100.0 (no 100): en SQLite y en SQL Server, entero/entero trunca a 0.",
         "Nunca sume contratos.valor_total después de unir con desembolsos: cada pago repite el contrato. Calcule lo pagado y lo contratado en subconsultas separadas."
       ],
       "ejemplos": [

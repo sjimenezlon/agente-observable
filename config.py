@@ -15,6 +15,9 @@ CAPA = Path(os.environ.get("AURORA_CAPA", DATOS / "capa_semantica.json"))
 PREGUNTAS = DATOS / "preguntas.json"
 INSTRUCCIONES = RAIZ / "instrucciones.txt"
 
+# Motor de la base: sqlite (archivo local, por defecto) o sqlserver (la base compartida en la nube o la del aula).
+# Se lee después de cargar .env: use motor() y sqlserver().
+
 # Topes: los pone el código, no el prompt.
 MAX_HERRAMIENTAS = 6
 MAX_LLAMADAS_MODELO = 7
@@ -31,6 +34,21 @@ def cargar_env() -> None:
                 v = v.split(" #")[0].strip().strip('"')
                 if v:
                     os.environ.setdefault(k.strip(), v)
+
+
+def motor() -> str:
+    cargar_env()
+    return os.environ.get("DB_MOTOR", "sqlite").lower()
+
+
+def sqlserver() -> dict:
+    cargar_env()
+    faltan = [k for k in ("SQLSERVER_HOST", "SQLSERVER_USER", "SQLSERVER_PASSWORD") if not os.environ.get(k)]
+    if faltan:
+        raise SystemExit(f"Con DB_MOTOR=sqlserver faltan en .env: {', '.join(faltan)}")
+    return {"server": os.environ["SQLSERVER_HOST"], "port": int(os.environ.get("SQLSERVER_PORT", "1433")),
+            "user": os.environ["SQLSERVER_USER"], "password": os.environ["SQLSERVER_PASSWORD"],
+            "database": os.environ.get("SQLSERVER_DB", "aurora")}
 
 
 @dataclass

@@ -17,8 +17,9 @@ Lección interactiva que acompaña este repositorio: **[gobernanzadatos.vercel.a
 | Guardián | `guardian.py` | Solo lectura, una sentencia, solo lo que está en la capa, 50 filas, 2 segundos |
 | Agente | `agente.py` | El ciclo modelo → herramienta → modelo, con topes (6 consultas, 7 llamadas) |
 | Evaluación | `evaluar.py` | 11 preguntas y 6 calificadores en código, registrados en MLflow |
+| Base compartida | `cargar_sqlserver.py` | Lleva la base a SQL Server (Azure, Docker o el del aula) y crea un usuario que solo lee la capa |
 | Opinión humana | `opinar.py` | Una persona califica una respuesta; queda pegada a su traza |
-| Pruebas | `pruebas/prueba_sin_red.py` | 23 pruebas sin red ni modelo |
+| Pruebas | `pruebas/prueba_sin_red.py` | 28 pruebas sin red ni modelo |
 | Exportar | `exportar.py` | Corridas y trazas a un JSON liviano para un tablero |
 
 ## Instalar (una vez)
@@ -35,7 +36,7 @@ source .venv/bin/activate
 # .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python crear_base.py
-python pruebas/prueba_sin_red.py        # debe decir: 23 ok · 0 fallas
+python pruebas/prueba_sin_red.py        # debe decir: 28 ok · 0 fallas
 ```
 
 Baje un modelo local pequeño (2,5 GB; corre en un portátil con 16 GB de RAM):
@@ -86,6 +87,46 @@ python evaluar.py --backend groq --pausa 20
 
 Con Groq **las filas que devuelve la base viajan a un servidor externo**. Úselo solo con datos sintéticos. Con datos reales, modelo local.
 
+## La base compartida del curso (SQL Server en Azure)
+
+Para replicar el ejercicio como en el aula —un servidor de base de datos real, varias personas conectadas, permisos puestos por el servidor— la misma base sintética está en Azure SQL:
+
+| | |
+|---|---|
+| Servidor | `aurora-obs-francecentral.database.windows.net` (puerto 1433) |
+| Base | `aurora` |
+| Usuario | `estudiante` (solo lectura) |
+| Clave | la comparte el docente; no está en este repositorio |
+
+Ese usuario solo puede leer las columnas de la capa semántica: `contratistas` y `contratos.id_contratista` están **denegadas por el servidor**, y no puede escribir nada. Pruébelo: el servidor responde *«The SELECT permission was denied…»*.
+
+**Con el agente.** En `.env`:
+
+```
+DB_MOTOR=sqlserver
+SQLSERVER_HOST=aurora-obs-francecentral.database.windows.net
+SQLSERVER_DB=aurora
+SQLSERVER_USER=estudiante
+SQLSERVER_PASSWORD=<la clave del docente>
+```
+
+y corra igual: `python agente.py "..."` y `python evaluar.py`. Las trazas llevan la etiqueta `motor = sqlserver`.
+
+**Para mirarla sin código.** VS Code con la extensión *SQL Server (mssql)*, DBeaver o Azure Data Studio: servidor `aurora-obs-francecentral.database.windows.net`, autenticación *SQL Login*, base `aurora`. O en la terminal:
+
+```bash
+sqlcmd -S aurora-obs-francecentral.database.windows.net -d aurora -U estudiante
+```
+
+**A tener en cuenta.** Es la oferta gratuita de Azure SQL (sin servidor): si nadie la usa durante una hora se pausa, y la primera conexión después tarda hasta un minuto en despertarla. Si se agota el cupo gratuito del mes, se pausa hasta el mes siguiente; el plan B es la base local (`DB_MOTOR=sqlite`), que tiene exactamente los mismos datos.
+
+**Su propio servidor.** `cargar_sqlserver.py` carga la base en cualquier SQL Server; con Docker:
+
+```bash
+docker run -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD='Clave-Larga-2026' -p 1433:1433 -d mcr.microsoft.com/mssql/server:2022-latest
+python cargar_sqlserver.py --servidor localhost --admin sa --base aurora --crear-base --clave-estudiante 'Otra-Clave-2026'
+```
+
 ## Qué mirar en MLflow
 
 - **Traces**: cada pregunta es una traza con tres tipos de paso: `agente` (AGENT), `Completions` (cada llamada al modelo, con mensajes y tokens) y `ejecutar_sql` (TOOL, con el SQL y las filas). Etiquetas: `modelo`, `backend`, `capa`, `datos_salen`.
@@ -104,6 +145,7 @@ En un portátil (Apple Silicon, 24 GB, Ollama 0.40, MLflow 3.17), mismo examen d
 | `qwen3:4b` (piensa) | 100 % | 100 % | 5.084 | 64,2 |
 | `qwen3:4b-instruct`, capa **sin reglas** | **43 %** | 100 % | 1.443 | 1,8 |
 | `llama3.2:3b`, capa **sin reglas** | **29 %** | 67 % | 1.950 | 3,4 |
+| `qwen3:4b-instruct` contra **SQL Server en Azure** | 100 % | 100 % | 2.370 | 4,4 |
 
 Detalle y lectura en [RESULTADOS.md](RESULTADOS.md).
 

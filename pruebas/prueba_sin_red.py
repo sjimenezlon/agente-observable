@@ -66,6 +66,13 @@ comprobar("tabla fuera de la capa denegada", "DENEGADO" in guardian.ejecutar("SE
 comprobar("dos sentencias no pasan", not guardian.ejecutar("SELECT 1; DROP TABLE proyectos")["ok"])
 comprobar("CTE permitido", guardian.ejecutar("WITH v AS (SELECT * FROM proyectos) SELECT COUNT(*) FROM v")["ok"])
 
+print("\nGuardián de SQL Server (lo que se rechaza antes de conectarse)")
+comprobar("SQL Server: UPDATE denegado", "DENEGADO" in guardian.ejecutar_sqlserver("UPDATE desembolsos SET anulado = 1")["error"])
+comprobar("SQL Server: SELECT INTO denegado", "DENEGADO" in guardian.ejecutar_sqlserver("SELECT * INTO copia FROM proyectos")["error"])
+comprobar("SQL Server: contratistas denegada", "contratistas" in guardian.ejecutar_sqlserver("SELECT * FROM dbo.[contratistas]")["error"])
+comprobar("SQL Server: dos sentencias", not guardian.ejecutar_sqlserver("SELECT 1; DROP TABLE contratos")["ok"])
+comprobar("SQL Server: EXEC denegado", "DENEGADO" in guardian.ejecutar_sqlserver("WITH x AS (SELECT 1 AS a) SELECT * FROM x EXEC sp_who")["error"])
+
 print("\nCiclo del agente")
 antes = huella()
 r = preguntar("¿Cuántos proyectos vigentes?", B, Guionado([[llamada("SELECT COUNT(*) AS n FROM proyectos WHERE estado IN ('A','S')")],
