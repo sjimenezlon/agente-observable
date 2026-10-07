@@ -215,7 +215,7 @@ def main():
     for k, v in sorted(res.metrics.items()):
         if k.endswith("/mean"):
             print(f"  {k[:-5]:<24} {v:.0%}")
-    print(f"\nCorrida {res.run_id} · ábrala con:  mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5050")
+    print(f"\nCorrida {res.run_id} · ábrala con:  mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5070")
 
 
 if __name__ == "__main__":

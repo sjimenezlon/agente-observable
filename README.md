@@ -58,14 +58,14 @@ python agente.py "¿Qué porcentaje de ejecución lleva la vigencia 2026?"
 python evaluar.py
 python evaluar.py --modelo llama3.2:3b      # otro modelo, misma vara
 
-# 3. Ver todo en MLflow (otra terminal) → http://127.0.0.1:5050
-mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5050
+# 3. Ver todo en MLflow (otra terminal) → http://127.0.0.1:5070
+mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5070
 
 # 4. Dar su opinión sobre una respuesta (el id lo imprime agente.py)
 python opinar.py tr-xxxxxxxx mal "contó los suspendidos como cerrados"
 ```
 
-En macOS el puerto 5000 lo ocupa AirPlay; por eso 5050.
+Se usa el puerto 5070 para no chocar con otro MLflow abierto (el del curso usa 5050; en macOS el 5000 lo ocupa AirPlay). Cada proyecto tiene su propio `mlflow.db`, así que los registros tampoco se mezclan.
 
 ### Con LM Studio en vez de Ollama
 
