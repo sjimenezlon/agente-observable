@@ -360,10 +360,16 @@ async function preguntar() {
   const t = await esperar(id, (t) => {
     const total = (performance.now() - t0) / 1000;
     if (t.eventos.length !== vistos) { vistos = t.eventos.length; $('#pasos').innerHTML = pintarPasos(t.eventos, total) || '<p class="vacio">Cargando el modelo en memoria…</p>'; }
-    const ult = t.eventos[t.eventos.length - 1];
-    if (ult?.tipo === 'modelo_inicio') { nodo('modelo', 'activo'); }
-    if (ult?.tipo === 'modelo' && ult.pide.length) { nodo('modelo', 'hecho'); nodo('guardian', 'activo'); }
-    if (ult?.tipo === 'sql') { nodo('guardian', ult.ok ? 'hecho' : 'alerta'); nodo('base', ult.ok ? 'hecho' : ''); nodo('modelo', 'activo'); }
+    // El recorrido se recalcula con TODOS los eventos: entre dos sondeos pueden llegar varios.
+    reiniciarRecorrido(); nodo('pregunta', 'hecho');
+    let tocoBase = false, negado = false;
+    for (const e of t.eventos) {
+      if (e.tipo === 'modelo_inicio') nodo('modelo', 'activo');
+      if (e.tipo === 'modelo') { nodo('modelo', 'hecho'); if (e.pide.length) nodo('guardian', 'activo'); }
+      if (e.tipo === 'sql') { if (e.ok) tocoBase = true; else negado = true; }
+    }
+    if (tocoBase) nodo('base', 'hecho');
+    if (t.eventos.some((e) => e.tipo === 'sql')) nodo('guardian', negado && !tocoBase ? 'alerta' : 'hecho');
   });
   clearInterval(reloj);
   $('#cronometro').textContent = 'listo · ' + ((performance.now() - t0) / 1000).toFixed(1).replace('.', ',') + ' s';
