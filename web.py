@@ -1,10 +1,10 @@
 """El agente en el navegador: pregunte, mire la traza en vivo, opine y pruebe el guardián.
 
-    python web.py                 → http://127.0.0.1:8070
+    python web.py                 → http://127.0.0.1:8070  (y enciende MLflow en el 5070 si no está)
     python web.py --puerto 8071
 
 Sin dependencias nuevas (servidor de la biblioteca estándar). Todo queda en el mismo MLflow del
-ejercicio (mlflow.db): abra en otra terminal  mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5070
+ejercicio (mlflow.db). Un solo comando: web.py enciende MLflow y lo apaga al cerrar con Ctrl+C.
 """
 import os
 os.environ.setdefault("MLFLOW_LOGGING_LEVEL", "WARNING")   # sin líneas INFO de MLflow en la terminal
@@ -142,17 +142,47 @@ class Manejador(BaseHTTPRequestHandler):
             self._json({"error": "no existe"}, 404)
 
 
+def encender_mlflow() -> str:
+    """Si MLflow no está corriendo, lo enciende en segundo plano (sin llenar la terminal de mensajes)."""
+    try:
+        urllib.request.urlopen(MLFLOW_UI, timeout=2)
+        return "ya estaba encendido"
+    except OSError:
+        pass
+    import atexit
+    import subprocess
+    import sys
+    puerto = MLFLOW_UI.rsplit(":", 1)[-1].strip("/")
+    entorno = {**os.environ, "MLFLOW_LOGGING_LEVEL": "WARNING", "MLFLOW_DISABLE_AGENT_HINT": "1"}
+    proc = subprocess.Popen([sys.executable, "-m", "mlflow", "ui", "--backend-store-uri",
+                             f"sqlite:///{config.RAIZ / 'mlflow.db'}", "--port", puerto],
+                            cwd=config.RAIZ, env=entorno, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    atexit.register(proc.terminate)
+    for _ in range(40):
+        time.sleep(0.5)
+        try:
+            urllib.request.urlopen(MLFLOW_UI, timeout=2)
+            return "encendido por web.py"
+        except OSError:
+            continue
+    return "no respondió (puede encenderlo aparte con: mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5070)"
+
+
 def main():
     a = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     a.add_argument("--puerto", type=int, default=8070)
     a.add_argument("--sin-abrir", action="store_true", help="No abrir el navegador")
+    a.add_argument("--sin-mlflow", action="store_true", help="No encender MLflow")
     x = a.parse_args()
     preparar_mlflow()
     if not config.BASE.exists():
         import crear_base
         crear_base.crear()
     url = f"http://127.0.0.1:{x.puerto}"
-    print(f"\nAgente observable en el navegador → {url}\nMLflow del ejercicio → {MLFLOW_UI}\n(Ctrl+C para cerrar)\n")
+    estado_mlflow = "no se encendió (--sin-mlflow)" if x.sin_mlflow else encender_mlflow()
+    print(f"\n  Agente observable en el navegador → {url}"
+          f"\n  MLflow (la bitácora)              → {MLFLOW_UI}  ({estado_mlflow})"
+          f"\n\n  Deje esta terminal abierta. Para cerrar todo: Ctrl+C\n")
     if not x.sin_abrir:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     ThreadingHTTPServer(("127.0.0.1", x.puerto), Manejador).serve_forever()

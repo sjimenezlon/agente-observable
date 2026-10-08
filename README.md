@@ -55,7 +55,7 @@ ollama pull llama3.2:3b          # opcional, para comparar
 # 1. Una pregunta
 python agente.py "¿Qué porcentaje de ejecución lleva la vigencia 2026?"
 
-# 1b. O en el navegador, con la traza en vivo → http://127.0.0.1:8070
+# 1b. O en el navegador, con la traza en vivo → http://127.0.0.1:8070 (enciende MLflow solo)
 python web.py
 
 # 2. El set completo, medido
@@ -135,7 +135,7 @@ python cargar_sqlserver.py --servidor localhost --admin sa --base aurora --crear
 
 ## En el navegador
 
-`python web.py` abre **http://127.0.0.1:8070** (sin dependencias nuevas):
+`python web.py` abre **http://127.0.0.1:8070** y, si no está encendido, enciende MLflow en el 5070 en silencio. Un solo comando; Ctrl+C apaga los dos:
 
 - **Preguntar**: cada llamada al modelo y cada consulta aparecen mientras ocurren, con su tiempo, sus tokens, el SQL y las filas. Al final, la respuesta, el enlace a su traza en MLflow y los botones 👍 / 👎 para dejar su opinión (queda como HUMAN en la traza).
 - **Guardián**: SQL directo, sin modelo, contra la base local o la compartida, para ver qué niega el guardián y qué niega el servidor.
