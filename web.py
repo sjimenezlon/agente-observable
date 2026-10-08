@@ -102,6 +102,7 @@ class Manejador(BaseHTTPRequestHandler):
         return json.loads(self.rfile.read(n) or b"{}")
 
     def do_GET(self):
+        self.path = self.path.split("?", 1)[0]          # /?algo también abre la página
         if self.path in ("/", "/index.html"):
             cuerpo = PAGINA.read_bytes()
             self.send_response(200)
