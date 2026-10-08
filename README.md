@@ -26,7 +26,7 @@ Lección interactiva que acompaña este repositorio: **[gobernanzadatos.vercel.a
 
 ## Instalar (una vez)
 
-Requisitos: Python 3.11 o superior, Git y [Ollama](https://ollama.com/download).
+Requisitos: Python 3.11 o más reciente (recomendado 3.13; probado con 3.11, 3.13 y 3.14), Git y [Ollama](https://ollama.com/download).
 
 ```bash
 git clone https://github.com/sjimenezlon/agente-observable.git
