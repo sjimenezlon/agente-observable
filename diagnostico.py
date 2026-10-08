@@ -14,6 +14,7 @@ import json
 import os
 import platform
 import sys
+import time
 import urllib.request
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
@@ -79,7 +80,14 @@ def main():
     else:
         import guardian
         try:
-            r = guardian.ejecutar("SELECT COUNT(*) AS vigentes FROM proyectos WHERE estado IN ('A','S')")
+            consulta = "SELECT COUNT(*) AS vigentes FROM proyectos WHERE estado IN ('A','S')"
+            r = guardian.ejecutar(consulta)
+            for intento in range(4):                  # la base gratuita se duerme tras una hora sin uso
+                if r["ok"] or not r["error"].startswith("BASE_DORMIDA"):
+                    break
+                print(f"     … la base compartida estaba dormida: despertándola ({intento + 1}/4, espere)", flush=True)
+                time.sleep(15)
+                r = guardian.ejecutar(consulta)
             paso("Conexión a la base compartida", r["ok"],
                  f"{config.sqlserver()['server']} · {r['rows'][0]['vigentes']} proyectos vigentes" if r["ok"] else r["error"][:90],
                  "Revise SQLSERVER_HOST, SQLSERVER_USER y SQLSERVER_PASSWORD en .env. Si tarda, la base estaba dormida: repita en un minuto.")
