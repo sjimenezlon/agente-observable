@@ -118,6 +118,9 @@ def ejecutar_sqlserver(sql: str) -> dict:
         if "40613" in msg or "not currently available" in msg or "Adaptive Server connection failed" in msg:
             return {"ok": False, "error": "BASE_DORMIDA: la base compartida se está despertando (se duerme tras una hora "
                                           "sin uso) o no hay conexión. Repita en un minuto."}
+        if "Login failed" in msg:
+            return {"ok": False, "error": "SQL_LOGIN: el servidor rechazó el usuario o la clave. Revise SQLSERVER_USER y "
+                                          "SQLSERVER_PASSWORD en .env (sin comillas ni espacios) y guarde el archivo."}
         if "permission was denied" in msg:
             return {"ok": False, "error": f"SQL_DENEGADO por el servidor: {msg[:160]}"}
         return {"ok": False, "error": f"SQL_INVALIDO: {msg[:200]}"}
