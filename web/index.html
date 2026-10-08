@@ -296,7 +296,7 @@ function pintarPasos(eventos, total) {
       if (i >= 0) pasos[i] = { html }; else pasos.push({ html });
     }
     if (e.tipo === 'sql') {
-      pasos.push({ html: `<div class="paso sql ${e.ok ? '' : 'negado'}"><div class="cab"><span class="tipo">${e.ok ? '🛡️ Guardián: permitido → 🗄️ base' : String(e.error).startsWith('BASE_DORMIDA') ? '🗄️ Base: no disponible' : String(e.error).includes('servidor') ? '🗄️ Servidor: permiso denegado' : '🛡️ Guardián: denegado'}</span><span class="meta">${e.seg < 0.05 ? '<0,1' : e.seg.toFixed(1)} s${e.rows ? ` · ${e.rows.length} filas` : ''}</span></div>
+      pasos.push({ html: `<div class="paso sql ${e.ok ? '' : 'negado'}"><div class="cab"><span class="tipo">${e.ok ? '🛡️ Guardián: permitido → 🗄️ base' : String(e.error).startsWith('BASE_DORMIDA') ? '🗄️ Base: no disponible' : String(e.error).startsWith('SQL_LOGIN') ? '🔑 Servidor: usuario o clave rechazados' : String(e.error).includes('servidor') ? '🗄️ Servidor: permiso denegado' : '🛡️ Guardián: denegado'}</span><span class="meta">${e.seg < 0.05 ? '<0,1' : e.seg.toFixed(1)} s${e.rows ? ` · ${e.rows.length} filas` : ''}</span></div>
         <div class="barra"><i style="left:${(e.t / esc_t) * 100}%;width:${Math.max(1, (e.seg / esc_t) * 100)}%"></i></div>
         ${e.ok ? tablaFilas(e.rows) : `<p class="error">${esc(e.error)}</p>`}</div>` });
     }
@@ -403,7 +403,7 @@ async function ejecutarSQL() {
   $('#resultado-sql').innerHTML = `<p class="etiqueta">${motor === 'sqlserver' ? 'Base compartida · ' + esc(E.servidor) : 'Base local · SQLite'} · ${seg} s</p>
     <div class="paso sql ${r.ok ? '' : 'negado'}" style="animation:sube .3s"><div class="cab"><span class="tipo" style="font-size:16px">${r.ok ? '✓ Permitido' : '✕ Denegado'}</span></div>
     <pre class="codigo">${resaltarSQL(sql)}</pre>${r.ok ? tablaFilas(r.rows) : `<p class="error" style="font-size:13.5px">${esc(r.error)}</p>`}</div>
-    <p class="ayuda">${r.ok ? 'Lectura dentro de la capa semántica: máximo 50 filas.' : (String(r.error).includes('servidor') ? 'Lo negó el <b>servidor</b>: el usuario no tiene ese permiso.' : 'Lo negó el <b>guardián</b> antes de llegar a la base.')}</p>`;
+    <p class="ayuda">${r.ok ? 'Lectura dentro de la capa semántica: máximo 50 filas.' : (String(r.error).startsWith('SQL_LOGIN') ? 'El servidor no aceptó el usuario o la clave: revise <b>.env</b>.' : String(r.error).startsWith('BASE_DORMIDA') ? 'La base se está despertando: repita en un minuto.' : String(r.error).includes('servidor') ? 'Lo negó el <b>servidor</b>: el usuario no tiene ese permiso.' : 'Lo negó el <b>guardián</b> antes de llegar a la base.')}</p>`;
 }
 $('#btn-sql').onclick = ejecutarSQL;
 
