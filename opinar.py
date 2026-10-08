@@ -6,6 +6,10 @@
 En MLflow queda como evaluación humana (HUMAN) junto a las del código (CODE): cuando no coinciden,
 ahí está la conversación que vale la pena.
 """
+import os
+os.environ.setdefault("MLFLOW_LOGGING_LEVEL", "WARNING")   # sin líneas INFO de MLflow en la terminal
+os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
+
 import argparse
 
 import mlflow

@@ -5,6 +5,10 @@
 Un modelo de mentira («guionado») devuelve las respuestas que le dictamos. Así se prueba lo que
 decide el código, que es justo lo que no debe depender del modelo.
 """
+import os
+os.environ.setdefault("MLFLOW_LOGGING_LEVEL", "WARNING")   # sin líneas INFO de MLflow en la terminal
+os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
+
 import json
 import os
 import sys

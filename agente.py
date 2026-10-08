@@ -7,6 +7,10 @@
 El ciclo cabe en una pantalla: el modelo propone, el código decide. Cada vuelta queda en una traza
 de MLflow (agente → llamadas al modelo → herramienta), con tokens, tiempos, el SQL y las filas.
 """
+import os
+os.environ.setdefault("MLFLOW_LOGGING_LEVEL", "WARNING")   # sin líneas INFO de MLflow en la terminal
+os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
+
 import argparse
 import json
 import os

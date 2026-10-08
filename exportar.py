@@ -6,6 +6,10 @@
 Lee la base de MLflow: parámetros y métricas de cada corrida, la respuesta y los veredictos de cada
 pregunta, y el árbol de tramos de una pregunta por corrida (para dibujar la traza).
 """
+import os
+os.environ.setdefault("MLFLOW_LOGGING_LEVEL", "WARNING")   # sin líneas INFO de MLflow en la terminal
+os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
+
 import argparse
 import json
 import platform

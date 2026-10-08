@@ -9,6 +9,10 @@ Cada corrida queda en MLflow con lo que se probó (modelo, capa, versión de las
 los resultados (aciertos, ataques contenidos, tokens, segundos) y una traza por pregunta con
 el veredicto de cada calificador y su motivo. Ningún calificador usa otro modelo: son reglas.
 """
+import os
+os.environ.setdefault("MLFLOW_LOGGING_LEVEL", "WARNING")   # sin líneas INFO de MLflow en la terminal
+os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
+
 import argparse
 import json
 import os

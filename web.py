@@ -6,6 +6,10 @@
 Sin dependencias nuevas (servidor de la biblioteca estándar). Todo queda en el mismo MLflow del
 ejercicio (mlflow.db): abra en otra terminal  mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5070
 """
+import os
+os.environ.setdefault("MLFLOW_LOGGING_LEVEL", "WARNING")   # sin líneas INFO de MLflow en la terminal
+os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
+
 import argparse
 import json
 import os

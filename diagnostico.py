@@ -4,6 +4,10 @@
 
 Nada de lo que revisa sale del equipo, salvo la conexión a la base compartida (si la configuró).
 """
+import os
+os.environ.setdefault("MLFLOW_LOGGING_LEVEL", "WARNING")   # sin líneas INFO de MLflow en la terminal
+os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
+
 import importlib
 import importlib.util
 import json
