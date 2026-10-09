@@ -21,6 +21,7 @@ Lección interactiva que acompaña este repositorio: **[gobernanzadatos.vercel.a
 | App web | `web.py` + `web/index.html` | Preguntar con la traza en vivo, opinar y probar el guardián desde el navegador (puerto 8070) |
 | Diagnóstico | `diagnostico.py` | Revisa uno por uno los requisitos y dice qué hacer si algo falla |
 | Opinión humana | `opinar.py` | Una persona califica una respuesta; queda pegada a su traza |
+| Búsqueda | `buscar.py` | Consulta la bitácora: por persona, modelo, palabra, calidad o lentitud; o una traza paso a paso |
 | Pruebas | `pruebas/prueba_sin_red.py` | 28 pruebas sin red ni modelo |
 | Exportar | `exportar.py` | Corridas y trazas a un JSON liviano para un tablero |
 
@@ -67,6 +68,15 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5070
 
 # 4. Dar su opinión sobre una respuesta (el id lo imprime agente.py)
 python opinar.py tr-xxxxxxxx mal "contó los suspendidos como cerrados"
+
+# 5. Buscar en la bitácora desde la terminal (lo mismo que la pestaña Traces de MLflow)
+python buscar.py                            # las últimas 15
+python buscar.py --texto anulados --malas   # por palabra y calidad
+python buscar.py --modelo llama3.2:3b       # por modelo (también --usuario, --motor, --lentas 20)
+python buscar.py tr-xxxxxxxx                # una traza paso a paso
+
+# Todo lo anterior, guiado y con pausas (macOS / Linux / Git Bash)
+./demo_terminal.sh
 ```
 
 Se usa el puerto 5070 para no chocar con otro MLflow abierto (el del curso usa 5050; en macOS el 5000 lo ocupa AirPlay). Cada proyecto tiene su propio `mlflow.db`, así que los registros tampoco se mezclan.
